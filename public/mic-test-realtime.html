@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>실시간 마이크 테스트</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    h1 { margin-bottom: 30px; }
+    #volumeMeter {
+      width: 400px;
+      height: 50px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 25px;
+      overflow: hidden;
+      position: relative;
+      margin: 20px auto;
+    }
+    #volumeBar {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A, #FFEB3B, #FF9800, #F44336);
+      width: 0%;
+      transition: width 0.1s;
+    }
+    #volumeText {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      line-height: 50px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+    }
+    .status {
+      font-size: 24px;
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .info {
+      margin: 10px 0;
+      font-size: 18px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .error {
+      background: #f44336;
+    }
+    .success {
+      background: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎤 실시간 마이크 테스트</h1>
+    
+    <button id="startBtn">마이크 테스트 시작</button>
+    
+    <div id="volumeMeter" style="display: none;">
+      <div id="volumeBar"></div>
+      <div id="volumeText">0%</div>
+    </div>
+    
+    <div class="status" id="status">버튼을 눌러 시작하세요</div>
+    
+    <div class="info" id="maxVolume">최대 볼륨: 0%</div>
+    <div class="info" id="avgVolume">평균 볼륨: 0%</div>
+    <div class="info" id="frequency">감지된 주파수: ---</div>
+  </div>
+
+  <script>
+    let audioContext;
+    let analyser;
+    let microphone;
+    let maxVol = 0;
+    let volSum = 0;
+    let volCount = 0;
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      try {
+        // 마이크 권한 요청
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          } 
+        });
+        
+        // AudioContext 생성
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0;
+        
+        microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        
+        document.getElementById('status').textContent = '✅ 마이크 연결 완료! 소리를 내보세요';
+        document.getElementById('status').className = 'status success';
+        document.getElementById('volumeMeter').style.display = 'block';
+        document.getElementById('startBtn').style.display = 'none';
+        
+        // 실시간 볼륨 측정
+        updateVolume();
+        
+      } catch (error) {
+        document.getElementById('status').textContent = '❌ 마이크 접근 실패: ' + error.message;
+        document.getElementById('status').className = 'status error';
+      }
+    });
+
+    function updateVolume() {
+      const dataArray = new Float32Array(analyser.fftSize);
+      analyser.getFloatTimeDomainData(dataArray);
+      
+      // RMS 계산
+      let sum = 0;
+      let max = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const val = dataArray[i];
+        sum += val * val;
+        const absVal = Math.abs(val);
+        if (absVal > max) max = absVal;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+      
+      // 볼륨 퍼센트 (0~100%)
+      const volumePercent = Math.min(100, max * 1000); // 증폭
+      
+      // UI 업데이트
+      document.getElementById('volumeBar').style.width = volumePercent + '%';
+      document.getElementById('volumeText').textContent = Math.round(volumePercent) + '%';
+      
+      // 통계
+      if (max > maxVol) {
+        maxVol = max;
+        document.getElementById('maxVolume').textContent = '최대 볼륨: ' + Math.round(maxVol * 1000) + '%';
+      }
+      
+      volSum += max;
+      volCount++;
+      const avgVol = volSum / volCount;
+      document.getElementById('avgVolume').textContent = '평균 볼륨: ' + Math.round(avgVol * 1000) + '%';
+      
+      // 상태 메시지
+      if (max > 0.01) {
+        document.getElementById('status').textContent = '🎤 소리 감지 중! (좋음)';
+        document.getElementById('status').className = 'status success';
+      } else if (max > 0.001) {
+        document.getElementById('status').textContent = '⚠️ 소리가 너무 작습니다';
+        document.getElementById('status').style.background = '#FF9800';
+      } else {
+        document.getElementById('status').textContent = '❌ 소리가 감지되지 않습니다';
+        document.getElementById('status').className = 'status error';
+      }
+      
+      // 계속 업데이트
+      requestAnimationFrame(updateVolume);
+    }
+  </script>
+</body>
+</html>
+

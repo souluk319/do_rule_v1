@@ -1,0 +1,7 @@
+node_modules
+.git
+.env
+*.log
+*.bat
+bootstrap.ps1
+
