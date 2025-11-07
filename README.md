@@ -12,6 +12,17 @@
 
 제시된 단어를 **특정 음정(C3, C4, C5)으로 발음**하여 클리어하는 웹 게임입니다.
 
+### 💡 설계 철학
+
+**틱톡/릴스 숏폼 콘텐츠 활용을 염두하여** 설계 하였습니다.
+
+- **프론트엔드 중심 아키텍처**: 빠른 반응성과 부드러운 UI/UX
+- **모바일 최적화**: 390x844
+- **카메라 모드**: 실시간 녹화 및 공유 기능
+- **즉각적 피드백**: 60fps 애니메이션, 실시간 음정 시각화
+
+추후 업데이트를 통해 백엔드 없이 브라우저만으로 실행되어, 어디서든 즉시 플레이하고 녹화할 수 있습니다.
+
 ### 핵심 규칙
 
 예: "모나리자" (4글자) = 4번 시도
@@ -59,10 +70,12 @@
 FabFilter Pro-Q 4로 실측한 결과:
 
 <img src="docs/images/c3_129_99.jpeg" width="500" alt="C3 측정">
+<img src="docs\images\c4_264_10.jpeg" width="500" alt="C4 측정">
+<img src="docs\images\c5_530_0.jpeg" width="500" alt="C5 측정">
 
-- **C3**: 129.99Hz → 코드: 130.81Hz
-- **C4**: 264.10Hz → 코드: 261.63Hz  
-- **C5**: 530.00Hz → 코드: 523.25Hz
+- **C3**: 129.99Hz → 이론론: 130.81Hz
+- **C4**: 264.10Hz → 이론: 261.63Hz  
+- **C5**: 530.00Hz → 이론: 523.25Hz
 
 ```typescript
 // src/core/PitchDetector.ts
@@ -164,7 +177,7 @@ MIT License
 
 ## 🎵 게임 시연
 
-👉 **[여기에서 바로 플레이하기](https://hillary-unsecluding-unphilosophically.ngrok-free.dev/)**
+👉 **[플레이하기](https://hillary-unsecluding-unphilosophically.ngrok-free.dev/)**
 
 > ⚠️ 마이크 권한 필요
 
