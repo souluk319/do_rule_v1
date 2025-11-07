@@ -73,18 +73,21 @@ FabFilter Pro-Q 4로 실측한 결과:
 <img src="docs\images\c4_264_10.jpeg" width="500" alt="C4 측정">
 <img src="docs\images\c5_530_0.jpeg" width="500" alt="C5 측정">
 
-- **C3**: 129.99Hz → 이론론: 130.81Hz
+- **C3**: 129.99Hz → 이론: 130.81Hz
 - **C4**: 264.10Hz → 이론: 261.63Hz  
 - **C5**: 530.00Hz → 이론: 523.25Hz
 
+**코드 적용:**
 ```typescript
 // src/core/PitchDetector.ts
 private readonly frequencies = {
-  C3: 130.81,
-  C4: 261.63,
-  C5: 523.25
+  C3: 130.81,  // 실측: 129.99Hz (오차 0.82Hz)
+  C4: 261.63,  // 실측: 264.10Hz (오차 2.47Hz)
+  C5: 523.25   // 실측: 530.00Hz (오차 6.75Hz)
 };
 ```
+
+> 💡 실측값과 이론값의 차이(±7Hz)는 피아노 조율 상태에 따른 것으로, 게임에서는 표준 이론값을 사용하여 범용성을 확보했습니다.
 
 ---
 
