@@ -1,6 +1,6 @@
 # 도를아십니까 (DO-RULE)
 
-**절대음 C(도)를 구분하는 음성 리듬 게임**
+**절대음 C(도)를 구분하는 음성 가창 게임**
 
 [![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://reactjs.org/)
@@ -10,7 +10,7 @@
 
 ## 🎮 게임 개요
 
-제시된 단어를 **특정 음정(C3, C4, C5)으로 발음**하여 클리어하는 웹 게임입니다.
+제시된 단어를 **특정 음정(C3, C4, C5)을 발음**하여 클리어하는 웹 게임입니다.
 
 ### 💡 설계 철학
 
