@@ -58,9 +58,10 @@
 - **pitchfinder (YIN)**: 피치 감지 (정확도 95%+)
 - **OscillatorNode**: 가이드 톤 생성
 
-### AI
-- **Ollama (eeve)**: 한국어 제시어 동적 생성
-- Fallback Generator: Ollama 실패 시 백업
+### AI (다중 폴백 전략)
+- **Plan A - Ollama (EEVE)**: 한국어 특화 모델로 1차 시도
+- **Plan B - Ollama (gemma2:2b)**: EEVE 실패/부족 시 2차 시도
+- **Plan C - Fallback Words**: 모든 AI 실패 시 사전 정의 단어 사용
 
 ### 빌드
 - **Vite**: 빠른 개발 서버 & 빌드
@@ -91,19 +92,88 @@ private readonly frequencies = {
 
 > 💡 실측값과 이론값의 차이(±7Hz)는 피아노 조율 상태에 따른 것으로, 게임에서는 표준 이론값을 사용하여 범용성을 확보했습니다.
 
-** 제시어 생성 **
+## 🤖 제시어 생성 로직 (3단계 폴백 전략)
 
-1. 라운드 시작 시 eeve에 요청
-   "4글자, 유머러스한 일상어 8개 생성해줘"
-   
-2. eeve가 응답
-   "불닭볶음, 양념치킨, 김치찌개, 등등등"
-   
-3. 응답 파싱 (한글만 필터링, 중복 제거)
+매 라운드마다 새로운 단어를 생성하여 무한한 콘텐츠를 제공합니다.
 
-4. 게임에 단어 전달
+### Plan A: EEVE 모델 (1순위)
+```
+📍 라운드 시작 → 4글자 단어 10개 필요
+🤖 EEVE 호출: "정확히 4글자인 재미있는 한국어 명사 10개"
+✅ EEVE 응답: 8개 성공
+```
+- 한국어 특화 LLM으로 자연스러운 단어 생성
+- 10개 요청 → 랜덤 선택으로 다양성 확보
+- 성공 시 → **즉시 게임 진행**
 
-5. 네트워크 실패 시 → 폴백 단어 사용
+### Plan B: gemma2:2b 모델 (2순위)
+```
+⚠️ EEVE 부족: 8/10개만 생성
+📍 Plan B: gemma2:2b로 2개 추가 생성
+✅ gemma2:2b 응답: 2개 성공
+✅ 총 10개 완성 (EEVE 8 + Gemma 2)
+```
+- EEVE가 실패하거나 부족한 만큼만 생성
+- 빠르고 안정적인 보조 모델
+- 예: EEVE 6개 → gemma로 4개 보충
+
+### Plan C: 폴백 단어 (3순위)
+```
+⚠️ Plan B 부족: 총 5/10개만 생성
+📍 Plan C: 기본 단어 풀에서 5개 추가
+✅ 최종 10개 완성 (AI 5 + 폴백 5)
+```
+- 사전 정의된 재미있는 단어 풀 (글자수별 80개+)
+- **절대 실패하지 않음** - 항상 게임 진행 보장
+- 예: `피자나라`, `치킨공주`, `주식떡상` 등
+
+### 실제 동작 예시
+
+**시나리오 1: EEVE 완벽 성공 ✅**
+```
+🎲 제시어 생성: 4글자 x 10개
+📍 Plan A: EEVE 시도
+  ✓ "김치찌개" ✓ "불닭볶음" ✓ "치킨텐더" ...
+✅ Plan A 성공! EEVE 10개 생성 완료
+```
+
+**시나리오 2: EEVE + gemma 조합 🔄**
+```
+🎲 제시어 생성: 4글자 x 10개
+📍 Plan A: EEVE 시도 → 6개 성공
+📍 Plan B: gemma2:2b로 4개 추가 → 4개 성공
+✅ Plan B 성공! 총 10개 (EEVE 6 + Gemma 4)
+```
+
+**시나리오 3: 전체 폴백 🛡️**
+```
+🎲 제시어 생성: 6글자 x 10개
+📍 Plan A: EEVE 실패 → 0개
+📍 Plan B: gemma2:2b 시도 → 3개 성공
+📍 Plan C: 폴백 단어 7개 추가
+✅ Plan C 완료! 총 10개 (Gemma 3 + 폴백 7)
+```
+
+### 코드 위치
+```typescript
+// src/services/OllamaService.ts
+async generatePrompts(charLen, count) {
+  // Plan A: EEVE
+  const eeveWords = await tryGenerateWithModel('eeve', ...);
+  if (eeveWords.length >= count) return eeveWords;
+  
+  // Plan B: gemma2:2b
+  const needed = count - eeveWords.length;
+  const gemmaWords = await tryGenerateWithModel('gemma2:2b', ...);
+  
+  // Plan C: Fallback
+  const defaultWords = getDefaultWords(charLen);
+  return [...eeveWords, ...gemmaWords, ...defaultWords].slice(0, count);
+}
+```
+
+> 💡 **왜 이렇게 복잡하게?**  
+> EEVE는 한국어는 뛰어나지만 "정확히 N글자" 제약을 지키기 어려워합니다. 3단계 폴백으로 **항상 새로운 단어를 보장**하면서도 **게임 중단 없음**을 실현했습니다.
 
 
 ** 음성 입력 **
