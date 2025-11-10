@@ -18,7 +18,6 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { PitchDetector } from '../core/PitchDetector';
-import { OscillatorTone } from '../core/OscillatorTone';
 import { OllamaService } from '../services/OllamaService';
 import { generateNaturalFallback } from '../utils/FallbackGenerator';
 
@@ -40,20 +39,27 @@ export const useGameLoop = () => {
   const completeAttempt = useGameStore(state => state.completeAttempt);
   const completeRound = useGameStore(state => state.completeRound);
   const updateTimer = useGameStore(state => state.updateTimer);
+  const setCountdown = useGameStore(state => state.setCountdown);
+  const setShowRoundClear = useGameStore(state => state.setShowRoundClear);
+  const setAudioReady = useGameStore(state => state.setAudioReady);
+  const setPaused = useGameStore(state => state.setPaused);
   const updatePitch = useGameStore(state => state.updatePitch);
   
   // ===== useRef: 컴포넌트 생명주기 동안 유지되는 변수 =====
   // React 리렌더링과 무관하게 값을 유지하기 위해 useRef 사용
   const audioContextRef = useRef<AudioContext | null>(null);        // Web Audio API 엔진
   const pitchDetectorRef = useRef<PitchDetector | null>(null);      // 피치 감지기 (YIN 알고리즘)
-  const oscillatorToneRef = useRef<OscillatorTone | null>(null);    // 가이드 톤 생성기
   const ollamaServiceRef = useRef(new OllamaService());             // AI 제시어 생성 서비스
   const micStreamRef = useRef<MediaStream | null>(null);            // 마이크 스트림
+  const guideAudioRef = useRef<HTMLAudioElement | null>(null);      // 가이드 톤 WAV
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);         // 배경음악
+  const correctSfxRef = useRef<HTMLAudioElement | null>(null);      // 정답 효과음
+  const negativeSfxRef = useRef<HTMLAudioElement | null>(null);     // 오답 효과음
+  const roundClearSfxRef = useRef<HTMLAudioElement | null>(null);   // 라운드 클리어 효과음
   
-  const timerIntervalRef = useRef<any>(null);                       // 15초 타이머
+  const timerIntervalRef = useRef<any>(null);                       // 8초 타이머
   const pitchCheckIntervalRef = useRef<any>(null);                  // 50ms마다 피치 체크
   const usedPromptsRef = useRef<Set<string>>(new Set());            // 중복 단어 방지
-  const wordPoolRef = useRef<string[]>([]);                         // Ollama 생성 단어 풀
 
   // ===== 🎤 1단계: 오디오 초기화 (게임 시작 시 1회만 실행) =====
   useEffect(() => {
@@ -83,13 +89,36 @@ export const useGameLoop = () => {
         console.log('✅ PitchDetector 초기화 완료');
         
         // OscillatorTone 초기화
-        oscillatorToneRef.current = new OscillatorTone(audioContextRef.current);
-        console.log('✅ OscillatorTone 초기화 완료');
+        // ===== 🎵 가이드 톤 WAV 로드 =====
+        guideAudioRef.current = new Audio('/docs/sounds/c_gudie.wav');
+        guideAudioRef.current.volume = 0.5;
+        console.log('✅ 가이드 톤 WAV 로드 완료');
+        
+        // ===== 🎵 배경음악 로드 (재생은 카운트다운 후) =====
+        bgMusicRef.current = new Audio('/docs/sounds/bg_perc.wav');
+        bgMusicRef.current.loop = true;
+        bgMusicRef.current.volume = 0.3;
+        console.log('✅ 배경음악 로드 완료 (재생 대기)');
+        
+        // ===== 🎵 효과음 로드 =====
+        correctSfxRef.current = new Audio('/docs/sounds/correct.wav');
+        correctSfxRef.current.volume = 0.6;
+        
+        negativeSfxRef.current = new Audio('/docs/sounds/negative.wav');
+        negativeSfxRef.current.volume = 0.6;
+        
+        roundClearSfxRef.current = new Audio('/docs/sounds/roundclear.wav');
+        roundClearSfxRef.current.volume = 0.7;
+        console.log('✅ 효과음 로드 완료');
         
         console.log('✅✅✅ 오디오 초기화 완료!');
+        
+        // ===== 오디오 준비 완료 상태 업데이트 =====
+        setAudioReady(true);
       } catch (error) {
         console.error('❌❌❌ 오디오 초기화 실패:', error);
         alert('마이크 권한이 필요합니다!');
+        setAudioReady(false);
       }
     };
     
@@ -114,7 +143,7 @@ export const useGameLoop = () => {
    * 흐름:
    * 1. Ollama로 제시어 생성 (4/5/6글자)
    * 2. 카운트다운 + 가이드 톤 (3, 2, 1, Go!!)
-   * 3. 15초 타이머 시작
+   * 3. 8초 타이머 시작
    * 4. 첫 번째 시도 시작
    */
   const startNextRound = async () => {
@@ -130,31 +159,31 @@ export const useGameLoop = () => {
     // 이 부분이 과제의 핵심입니다!
     // eeve 모델을 사용하여 매 라운드마다 새로운 한국어 단어를 동적으로 생성합니다.
     
-    const charLen = getCharLength(currentRound); // 라운드별 글자 수 (1~10: 4글자, 11~20: 5글자, 21~30: 6글자)
+    const charLen = getCharLength(currentRound + 1); // 라운드별 글자 수 (1~10: 4글자, 11~20: 5글자, 21~30: 6글자)
+    console.log(`📏 라운드 ${currentRound + 1} → ${charLen}글자 단어 생성`);
     
-    // 단어 풀이 비어있으면 eeve로 새로 생성
-    if (wordPoolRef.current.length === 0) {
-      try {
-        // 🤖 eeve 호출: "4글자 유머러스한 일상어 8개 생성해줘"
-        console.log(`🤖 eeve 호출: ${charLen}글자 단어 8개 요청`);
-        const words = await ollamaServiceRef.current.generatePrompts(charLen, 8, difficulty);
-        
-        // 중복 제거 (이미 사용한 단어는 제외)
-        wordPoolRef.current = words.filter(w => !usedPromptsRef.current.has(w));
-        console.log(`✅ eeve 응답: ${wordPoolRef.current.length}개 단어 생성됨`, wordPoolRef.current);
-      } catch (e) {
-        console.warn('⚠️ eeve 실패 → 폴백 단어 사용');
-        wordPoolRef.current = [];
+    // ===== 🎲 매 라운드마다 새로운 단어 생성 (캐싱 제거!) =====
+    let word: string = '';
+    
+    try {
+      // 🤖 gemma2:2b 호출: "N글자 단어 10개 생성해줘"
+      console.log(`🤖 gemma2:2b 호출: ${charLen}글자 단어 생성 요청`);
+      const words = await ollamaServiceRef.current.generatePrompts(charLen, 10, difficulty);
+      
+      // 중복 아닌 단어 찾기
+      const newWords = words.filter(w => w.length === charLen && !usedPromptsRef.current.has(w));
+      
+      if (newWords.length > 0) {
+        // 랜덤 선택으로 다양성 확보
+        word = newWords[Math.floor(Math.random() * newWords.length)];
+        console.log(`✅ gemma2:2b 응답 성공: "${word}" (후보 ${newWords.length}개)`);
+      } else {
+        throw new Error('유효한 단어 없음');
       }
-    }
-    
-    // 단어 풀에서 하나 가져오기
-    let word = wordPoolRef.current.shift();
-    
-    // 단어가 없거나 중복이면 폴백 생성기 사용
-    if (!word || usedPromptsRef.current.has(word)) {
-      console.log('🎲 폴백 단어 생성기 사용');
+    } catch (e) {
+      console.warn('⚠️ gemma2:2b 실패 → 폴백 단어 사용');
       word = generateNaturalFallback(charLen, usedPromptsRef.current);
+      console.log(`🎲 폴백 단어: "${word}"`);
     }
     
     // 사용한 단어 기록 (중복 방지)
@@ -182,17 +211,31 @@ export const useGameLoop = () => {
     for (const count of counts) {
       console.log(`🔢 카운트: ${count}`);
       
-      // 가이드톤 재생
-      if (oscillatorToneRef.current) {
-        console.log(`🔊 가이드톤 재생: ${guideNote}`);
-        await oscillatorToneRef.current.play(guideNote, 300);
+      // ===== 화면에 카운트다운 표시 =====
+      setCountdown(count);
+      
+      // 가이드톤 WAV 재생
+      if (guideAudioRef.current) {
+        console.log(`🔊 가이드톤 WAV 재생`);
+        guideAudioRef.current.currentTime = 0;
+        guideAudioRef.current.play().catch(err => console.warn('가이드톤 재생 실패:', err));
       } else {
-        console.warn('⚠️ oscillatorTone이 null입니다!');
+        console.warn('⚠️ guideAudio가 null입니다!');
       }
       
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+    
+    // ===== 카운트다운 숨기기 =====
+    setCountdown(null);
     console.log('✅ 카운트다운 완료!');
+    
+    // ===== 🎵 배경음악 시작 (처음부터 재생) =====
+    if (bgMusicRef.current) {
+      bgMusicRef.current.currentTime = 0; // 처음부터 재생
+      bgMusicRef.current.play().catch(err => console.warn('배경음악 재생 실패:', err));
+      console.log('🎵 배경음악 시작!');
+    }
   };
 
   // 타이머 시작
@@ -201,9 +244,12 @@ export const useGameLoop = () => {
       clearInterval(timerIntervalRef.current);
     }
     
-    updateTimer(15);
+    updateTimer(8);
     
     timerIntervalRef.current = setInterval(() => {
+      // ===== 일시정지 중이면 타이머 업데이트 안 함 =====
+      if (useGameStore.getState().isPaused) return;
+      
       const currentTime = useGameStore.getState().timeRemaining;
       const newTime = currentTime - 0.1;
       
@@ -236,14 +282,42 @@ export const useGameLoop = () => {
     const word = useGameStore.getState().currentWord;
     console.log(`\n🎬🎬🎬 시도 시작: ${attemptIndex + 1}/${word.length}`);
     
+    // ===== 마지막 시도인 경우 타이머 정지 (판정 완료까지 대기) =====
+    if (attemptIndex === word.length - 1) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        console.log('⏸️ 마지막 시도 - 타이머 정지');
+      }
+    }
+    
     // ===== 모든 시도 완료 시 라운드 종료 =====
     if (attemptIndex >= word.length) {
       console.log('✅ 모든 시도 완료!');
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
+      
+      // ===== 🎵 BGM 정지 =====
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+        console.log('🎵 배경음악 정지');
+      }
+      
+      // ===== 🎉 라운드 클리어 효과음 + 이펙트 =====
+      if (roundClearSfxRef.current) {
+        roundClearSfxRef.current.currentTime = 0;
+        roundClearSfxRef.current.play().catch(err => console.warn('라운드 클리어 효과음 재생 실패:', err));
+        console.log('🎉 라운드 클리어!');
+      }
+      setShowRoundClear(true);
+      
       completeRound();
-      setTimeout(() => startNextRound(), 2000); // 2초 후 다음 라운드
+      
+      // 폭죽 이펙트 표시 후 다음 라운드
+      setTimeout(() => {
+        setShowRoundClear(false);
+        startNextRound();
+      }, 1500); // 1.5초 동안 라운드 클리어 표시
       return;
     }
     
@@ -259,7 +333,9 @@ export const useGameLoop = () => {
     // ===== 실시간 피치 감지 시작 =====
     const samples: string[] = [];          // tolerance 내의 감지된 음정들 저장
     const startTime = Date.now();
-    const judgmentDuration = 2000;         // 2초 동안 분석
+    const judgmentDuration = 2000;         // 최대 2초 동안 분석
+    const minDuration = 500;               // 최소 0.5초는 대기 (너무 빠른 판정 방지)
+    let earlySuccessCount = 0;             // 조기 성공 카운터
     
     if (pitchCheckIntervalRef.current) {
       clearInterval(pitchCheckIntervalRef.current);
@@ -267,6 +343,9 @@ export const useGameLoop = () => {
     
     // ===== 50ms마다 피치 체크 (1초에 20번) =====
     pitchCheckIntervalRef.current = setInterval(() => {
+      // ===== 일시정지 중이면 피치 감지 안 함 =====
+      if (useGameStore.getState().isPaused) return;
+      
       const elapsed = Date.now() - startTime;
       
       if (!pitchDetectorRef.current) return;
@@ -293,6 +372,38 @@ export const useGameLoop = () => {
       const targetNote = isReverse ? notes.low : notes.high;
       const isAccurate = detectedNote === targetNote && Math.abs(cents) <= tolerance;
       updatePitch(detectedNote || '---', cents, isAccurate);
+      
+      // ===== 조기 성공 감지 (빠른 클리어) =====
+      if (elapsed >= minDuration) {
+        const totalSamples = samples.length;
+        const focusCount = samples.filter(n => n === focusPitch).length;
+        const baseCount = samples.filter(n => n === basePitch).length;
+        
+        // 충분한 샘플이 모였고, 성공 조건 확실히 만족
+        if (totalSamples >= 10) {
+          const focusRatio = focusCount / totalSamples;
+          const baseRatio = baseCount / totalSamples;
+          
+          const focusSuccess = focusCount >= 2 || focusRatio >= 0.05;
+          const baseSuccess = baseCount >= 1 || baseRatio >= 0.3;
+          
+          // 연속으로 3번 성공 조건 만족 시 조기 종료 (빠른 응답!)
+          if (focusSuccess && baseSuccess) {
+            earlySuccessCount++;
+            if (earlySuccessCount >= 3) {  // 5번 → 3번으로 완화
+              console.log('⚡ 조기 성공 감지!');
+              clearInterval(pitchCheckIntervalRef.current);
+              
+              const success = true;
+              const accuracy = (focusRatio + baseRatio) / 2;
+              handleCompleteAttempt(success, accuracy);
+              return;
+            }
+          } else {
+            earlySuccessCount = 0;
+          }
+        }
+      }
       
       // ===== 2초 경과 시 판정 실행 =====
       if (elapsed >= judgmentDuration) {
@@ -338,13 +449,25 @@ export const useGameLoop = () => {
   const handleCompleteAttempt = (success: boolean, accuracy: number) => {
     completeAttempt(success, accuracy);
     
+    // ===== 🎵 효과음 재생 =====
+    if (success && correctSfxRef.current) {
+      correctSfxRef.current.currentTime = 0;
+      correctSfxRef.current.play().catch(err => console.warn('정답 효과음 재생 실패:', err));
+      console.log('✅ 정답 효과음 재생');
+    } else if (!success && negativeSfxRef.current) {
+      negativeSfxRef.current.currentTime = 0;
+      negativeSfxRef.current.play().catch(err => console.warn('오답 효과음 재생 실패:', err));
+      console.log('❌ 오답 효과음 재생');
+    }
+    
     const nextAttempt = useGameStore.getState().currentAttempt + 1;
     const word = useGameStore.getState().currentWord;
     
+    // ===== 즉시 다음 시도 (성공: 0.1초, 실패: 0.3초) =====
     if (nextAttempt >= word.length) {
-      startAttempt(nextAttempt);
+      startAttempt(nextAttempt);  // 모든 시도 완료 → 즉시 라운드 종료
     } else {
-      setTimeout(() => startAttempt(nextAttempt), success ? 300 : 500);
+      setTimeout(() => startAttempt(nextAttempt), success ? 100 : 300);
     }
   };
 
@@ -359,6 +482,12 @@ export const useGameLoop = () => {
       clearInterval(pitchCheckIntervalRef.current);
     }
     
+    // ===== 🎵 BGM 정지 =====
+    if (bgMusicRef.current) {
+      bgMusicRef.current.pause();
+      console.log('🎵 배경음악 정지');
+    }
+    
     // 남은 시도 모두 실패 처리
     const state = useGameStore.getState();
     for (let i = state.currentAttempt; i < state.currentWord.length; i++) {
@@ -366,14 +495,14 @@ export const useGameLoop = () => {
     }
     
     completeRound();
-    setTimeout(() => startNextRound(), 2000);
+    setTimeout(() => startNextRound(), 800); // 0.8초 후 다음 라운드 (빠른 전환)
   };
 
   // 헬퍼 함수들
   const getCharLength = (round: number): number => {
-    if (round < 10) return 4;
-    if (round < 20) return 5;
-    return 6;
+    if (round <= 10) return 4;  // 1~10 라운드: 4글자
+    if (round <= 20) return 5;  // 11~20 라운드: 5글자
+    return 6;                   // 21~30 라운드: 6글자
   };
 
   const getBaseNotes = () => {
@@ -391,8 +520,36 @@ export const useGameLoop = () => {
     }
   };
 
+  // ===== 일시정지/재개 함수 =====
+  const togglePause = () => {
+    const isPaused = useGameStore.getState().isPaused;
+    
+    if (!isPaused) {
+      // ===== 일시정지 =====
+      console.log('⏸️ 게임 일시정지');
+      
+      // BGM 정지
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+      }
+      
+      setPaused(true);
+    } else {
+      // ===== 재개 =====
+      console.log('▶️ 게임 재개');
+      
+      // BGM 재개
+      if (bgMusicRef.current && !useGameStore.getState().countdown) {
+        bgMusicRef.current.play().catch(err => console.warn('BGM 재개 실패:', err));
+      }
+      
+      setPaused(false);
+    }
+  };
+
   return {
     startNextRound,
+    togglePause,
   };
 };
 

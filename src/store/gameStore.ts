@@ -46,6 +46,18 @@ interface GameStore {
   timeRemaining: number;
   isAttempting: boolean;
   
+  // 카운트다운
+  countdown: string | null;
+  
+  // 라운드 클리어
+  showRoundClear: boolean;
+  
+  // 오디오 준비 상태
+  audioReady: boolean;
+  
+  // 일시정지
+  isPaused: boolean;
+  
   // 피치 감지
   detectedNote: string;
   detectedCents: number;
@@ -58,6 +70,10 @@ interface GameStore {
   completeAttempt: (success: boolean, accuracy: number) => void;
   completeRound: () => void;
   updateTimer: (time: number) => void;
+  setCountdown: (countdown: string | null) => void;
+  setShowRoundClear: (show: boolean) => void;
+  setAudioReady: (ready: boolean) => void;
+  setPaused: (paused: boolean) => void;
   updatePitch: (note: string, cents: number, isAccurate: boolean) => void;
   setIsAttempting: (attempting: boolean) => void;
   resetGame: () => void;
@@ -81,6 +97,11 @@ export const useGameStore = create<GameStore>((set) => ({
   
   timeRemaining: 15,
   isAttempting: false,
+  
+  countdown: null,
+  showRoundClear: false,
+  audioReady: false,
+  isPaused: false,
   
   detectedNote: '---',
   detectedCents: 0,
@@ -141,6 +162,14 @@ export const useGameStore = create<GameStore>((set) => ({
   })),
   
   updateTimer: (time) => set({ timeRemaining: time }),
+  
+  setCountdown: (countdown) => set({ countdown }),
+  
+  setShowRoundClear: (show) => set({ showRoundClear: show }),
+  
+  setAudioReady: (ready) => set({ audioReady: ready }),
+  
+  setPaused: (paused) => set({ isPaused: paused }),
   
   updatePitch: (note, cents, isAccurate) => set({
     detectedNote: note,

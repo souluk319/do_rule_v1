@@ -26,7 +26,7 @@ const GameUI: React.FC<GameUIProps> = ({
   targetPitches,
   isAttempting,
 }) => {
-  const progressPercent = (timeRemaining / 15) * 100;
+  const progressPercent = (timeRemaining / 8) * 100;
   const isLowTime = timeRemaining < 5;
   
   // 단어 글자 배열 메모이제이션 (불필요한 리렌더링 방지)
@@ -84,15 +84,15 @@ const GameUI: React.FC<GameUIProps> = ({
         </div>
       </div>
 
-          {/* 중앙: 단어 표시 */}
-          <div className="flex-1 flex items-center justify-center">
+          {/* 중앙: 단어 표시 (위쪽으로 이동) */}
+          <div className="flex-1 flex items-center justify-center" style={{ marginTop: '-120px' }}>
             {!currentWord ? (
               <div className="text-center">
                 <div className="text-2xl font-bold text-white/60 mb-2">준비 중...</div>
                 <div className="text-sm text-white/40">게임을 시작합니다</div>
               </div>
             ) : (
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             {/* 단어 */}
             <div className="flex gap-2">
               {wordChars.map((char, index) => {
@@ -135,14 +135,14 @@ const GameUI: React.FC<GameUIProps> = ({
               })}
             </div>
 
-            {/* 진행 안내 */}
+            {/* 진행 안내 (컴팩트) */}
             {isAttempting && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-black/60 backdrop-blur-md px-5 py-2 rounded-full"
+              className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full"
             >
-              <div className="text-sm font-bold text-white">
+              <div className="text-xs font-bold text-white">
                 시도 {currentAttempt + 1} / {currentWord.length}
               </div>
             </motion.div>

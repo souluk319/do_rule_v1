@@ -77,26 +77,21 @@ export class OllamaService {
    *  ..."
    */
   async generatePrompts(charLen: number, count: number = 8, difficulty: string = 'normal'): Promise<string[]> {
-    // Ollama URL이 localhost이고 접근 불가능한 경우 바로 기본 단어 사용
-    if (this.baseUrl.includes('localhost') && typeof window !== 'undefined') {
-      // 로컬 Ollama 서버 확인 (옵션)
-      const useOllama = (import.meta as any).env?.VITE_USE_OLLAMA !== 'false';
-      if (!useOllama) {
-        console.log('⚠️ Ollama 비활성화됨 → 폴백 단어 사용');
-        return this.getDefaultWords(charLen).slice(0, count);
-      }
-    }
-
-    console.log(`🤖 Ollama eeve 호출 시도: ${charLen}글자 x ${count}개`);
+    console.log(`🤖 Ollama eeve 호출 시도: ${charLen}글자 x ${count}개 (${this.baseUrl})`);
     try {
       const prompt = this.buildPromptPrompt(charLen, difficulty);
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'eeve',
+          model: 'gemma2:2b',
           prompt: prompt,
-          stream: false
+          stream: false,
+          options: {
+            temperature: 0.8,      // 창의성 높여서 다양한 단어 생성
+            top_p: 0.9,
+            num_predict: 150
+          }
         })
       });
 
@@ -107,12 +102,23 @@ export class OllamaService {
       const data = await response.json();
       const text = data.response || '';
       
-      // 응답 파싱 (한 줄당 하나의 단어)
+      console.log('🤖 EEVE 원본 응답:', text.substring(0, 200));
+      
+      // 응답 파싱 (번호, 기호 제거 후 한글만 추출)
       const items = text
         .split('\n')
-        .map((line: string) => line.trim())
-        .filter((line: string) => line.length === charLen && /^[가-힣]+$/.test(line))
+        .map((line: string) => {
+          // "4. 된장국물" → "된장국물"
+          // "- 김치찌개" → "김치찌개"
+          const cleaned = line.replace(/^[\d\-.\s)]+/, '').trim();
+          // 한글만 추출
+          const match = cleaned.match(/[가-힣]+/);
+          return match ? match[0] : '';
+        })
+        .filter((word: string) => word.length === charLen)
         .slice(0, count);
+      
+      console.log('✅ 파싱된 단어:', items);
 
       // 부족하면 기본 단어로 채우기
       const defaultWords = this.getDefaultWords(charLen);
@@ -161,13 +167,16 @@ export class OllamaService {
   }
 
   private buildPromptPrompt(charLen: number, _difficulty: string): string {
-    return `다음 조건에 맞는 한국어 단어를 생성해주세요:
-- 정확히 ${charLen}글자
-- 병맛스럽고 유머러스한 일상어
-- 발음하기 재미있는 단어
-- 예시: ${this.getDefaultWords(charLen).slice(0, 3).join(', ')}
+    return `정확히 ${charLen}글자인 재미있는 한국어 명사 10개를 생성해주세요.
+각 단어는 한 줄에 하나씩만 출력하세요.
+번호나 설명 없이 단어만 출력하세요.
 
-단어만 한 줄에 하나씩 출력하세요.`;
+예시 형식:
+김치찌개
+불닭볶음
+치킨무우
+
+이제 ${charLen}글자 단어 10개:`;
   }
 
   private buildCommentPrompt(_difficulty: string): string {
@@ -183,21 +192,21 @@ export class OllamaService {
       4: [
         '불닭볶음', '양념치킨', '김치찌개', '된장국물', '비빔밥맛',
         '햇살따뜻', '바람시원', '구름하늘', '눈사람만', '봄꽃향기',
-        '친구만남', '가족여행', '학교축제', '회사야근', '주말휴식',
-        '피자먹기', '커피마시', '게임하기', '영화보기', '음악듣기',
-        '책읽기좋', '산책가자', '운동하자', '공부하기', '잠자기좋',
+        '친구사이', '가족여행', '학교축제', '회사야근', '주말휴식',
+        '피자먹기', '카페라떼', '게임하기', '영화보기', '음악듣기',
+        '책은무슨', '산책가자', '운동하자', '공부하기', '잠자리채',
         '행복해요', '사랑해요', '고마워요', '미안해요', '힘내세요',
         '웃어봐요', '울지마요', '괜찮아요', '좋아해요', '싫어해요',
         '맛있어요', '배고파요', '졸려요즘', '피곤해요', '힘들어요'
       ],
       5: [
-        '불닭볶음면', '양념치킨맛', '김치찌개끓', '된장국물맛', '비빔밥비벼',
+        '불닭볶음면', '양념갈비맛', '김치빈대떡', '된장국물맛', '비빔밥비벼',
         '햇살따뜻해', '바람시원해', '구름많은날', '눈사람만들', '봄꽃향기좋',
         '친구만나자', '가족여행가', '학교축제다', '회사야근중', '주말휴식해',
         '피자먹고파', '커피마시자', '게임하고파', '영화보고파', '음악듣고파',
         '책읽고싶다', '산책가고파', '운동하자요', '공부해야지', '잠자고싶다',
         '행복하세요', '사랑합니다', '고맙습니다', '미안합니다', '힘내세요요',
-        '웃어봐요오', '울지마세요', '괜찮습니다', '좋아합니다', '싫어합니다',
+        '웃어봅시다', '울지마세요', '괜찮습니다', '좋아합니다', '싫어합니다',
         '맛있습니다', '배고픕니다', '졸립니다요', '피곤합니다', '힘듭니다요'
       ],
       6: [
@@ -208,7 +217,7 @@ export class OllamaService {
         '책읽고싶어요', '산책가고싶어요', '운동하고싶다', '공부해야하는데', '잠자고싶어요',
         '행복하세요오', '사랑합니다아', '고맙습니다아', '미안합니다아', '힘내세요오오',
         '웃어봐요오오', '울지마세요오', '괜찮습니다아', '좋아합니다아', '싫어합니다아',
-        '맛있습니다아', '배고픕니다아', '졸립니다아아', '피곤합니다아', '힘듭니다아아'
+        '맛있습니다아', '배고픕니다아', '졸립니다아아', '피곤합니다아', '힘듭니다아잉'
       ]
     };
     const list = words[charLen] || words[4];

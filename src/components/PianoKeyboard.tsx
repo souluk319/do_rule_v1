@@ -72,9 +72,11 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
                 <div
                   className={`
                     w-full h-full border-r border-gray-400 rounded-b-lg transition-all duration-150
-                    ${isDetected 
-                      ? 'bg-gradient-to-b from-green-300 to-green-400 shadow-lg shadow-green-500/50' 
-                      : 'bg-gradient-to-b from-white to-gray-100'
+                    ${isDetected && isTarget
+                      ? 'bg-gradient-to-b from-green-300 to-green-400 shadow-lg shadow-green-500/50'  // 목표 음정 맞음
+                      : isDetected
+                      ? 'bg-gradient-to-b from-yellow-300 to-orange-400 shadow-lg shadow-yellow-500/50'  // 다른 음정 감지
+                      : 'bg-gradient-to-b from-white to-gray-100'  // 기본
                     }
                     ${isTarget ? 'ring-2 ring-yellow-400' : ''}
                   `}
@@ -116,6 +118,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
             if (whiteKeyIndex === -1) return null;
             
             const isDetected = detectedNote === note;
+            const isTarget = targetKeys.includes(note);
             const left = ((whiteKeyIndex + 0.7) / whiteNotes.length) * 100;
 
             return (
@@ -135,9 +138,11 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
                 <div
                   className={`
                     w-full h-full rounded-b-lg transition-all duration-150
-                    ${isDetected 
-                      ? 'bg-gradient-to-b from-green-500 to-green-600 shadow-lg shadow-green-500/50' 
-                      : 'bg-gradient-to-b from-gray-800 to-black'
+                    ${isDetected && isTarget
+                      ? 'bg-gradient-to-b from-green-500 to-green-600 shadow-lg shadow-green-500/50'  // 목표 음정 맞음
+                      : isDetected
+                      ? 'bg-gradient-to-b from-yellow-500 to-orange-600 shadow-lg shadow-yellow-500/50'  // 다른 음정 감지
+                      : 'bg-gradient-to-b from-gray-800 to-black'  // 기본
                     }
                     border-l border-r border-black
                   `}

@@ -144,10 +144,32 @@ export class PitchDetector {
    * 주파수를 음정(C3, C4, C5)으로 변환하고 센트 단위 오차 계산
    */
   frequencyToNote(frequency: number): { note: string; cents: number } | null {
-    // C3 = 130.81Hz, C4 = 261.63Hz, C5 = 523.25Hz
+    // 모든 음정 주파수 (옥타브 3~5의 모든 반음)
     const notes = [
       { name: 'C3', freq: 130.81 },
+      { name: 'C#3', freq: 138.59 },
+      { name: 'D3', freq: 146.83 },
+      { name: 'D#3', freq: 155.56 },
+      { name: 'E3', freq: 164.81 },
+      { name: 'F3', freq: 174.61 },
+      { name: 'F#3', freq: 185.00 },
+      { name: 'G3', freq: 196.00 },
+      { name: 'G#3', freq: 207.65 },
+      { name: 'A3', freq: 220.00 },
+      { name: 'A#3', freq: 233.08 },
+      { name: 'B3', freq: 246.94 },
       { name: 'C4', freq: 261.63 },
+      { name: 'C#4', freq: 277.18 },
+      { name: 'D4', freq: 293.66 },
+      { name: 'D#4', freq: 311.13 },
+      { name: 'E4', freq: 329.63 },
+      { name: 'F4', freq: 349.23 },
+      { name: 'F#4', freq: 369.99 },
+      { name: 'G4', freq: 392.00 },
+      { name: 'G#4', freq: 415.30 },
+      { name: 'A4', freq: 440.00 },
+      { name: 'A#4', freq: 466.16 },
+      { name: 'B4', freq: 493.88 },
       { name: 'C5', freq: 523.25 }
     ];
 

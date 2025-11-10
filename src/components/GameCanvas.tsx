@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { useGameLoop } from '../hooks/useGameLoop';
 import PianoKeyboard from './PianoKeyboard';
@@ -6,21 +7,31 @@ import GameUI from './GameUI';
 
 const GameCanvas: React.FC = () => {
   const store = useGameStore();
-  const { startNextRound } = useGameLoop();
+  const { startNextRound, togglePause } = useGameLoop();
 
-  // 게임 시작
+  // 오디오 준비 완료 후 게임 시작
   useEffect(() => {
-    console.log('🎮 게임 시작!');
-    
-    // 오디오 초기화 대기 후 게임 시작
-    const timer = setTimeout(() => {
-      console.log('🎮 게임 시작 (오디오 준비 완료)');
-      startNextRound();
-    }, 500); // 0.5초 대기
-    
-    return () => clearTimeout(timer);
+    if (store.audioReady) {
+      console.log('🎮 오디오 준비 완료 → 게임 시작!');
+      const timer = setTimeout(() => {
+        startNextRound();
+      }, 1000); // 1초 대기 (오디오 파일 완전 로드 보장)
+      return () => clearTimeout(timer);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [store.audioReady]);
+
+  // ESC 키로 일시정지
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && store.audioReady && !store.countdown && !store.showRoundClear) {
+        togglePause();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [store.audioReady, store.countdown, store.showRoundClear, togglePause]);
 
   // 목표 음정 계산
   const calculateTargetPitches = (): string[] => {
@@ -51,6 +62,136 @@ const GameCanvas: React.FC = () => {
   return (
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 overflow-hidden">
       <div className="relative w-full h-full max-w-[430px] max-h-[932px]" style={{ aspectRatio: '390 / 844' }}>
+        {/* 오디오 준비 대기 화면 */}
+        {!store.audioReady && (
+          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center px-8"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="text-6xl mb-6"
+              >
+                🎤
+              </motion.div>
+              <div className="text-white text-2xl font-black mb-4">
+                마이크 권한 확인 중...
+              </div>
+              <div className="text-gray-300 text-sm">
+                브라우저에서 마이크 허용을 눌러주세요
+              </div>
+            </motion.div>
+          </div>
+        )}
+        
+        {/* 카운트다운 오버레이 */}
+        {store.countdown && (
+          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              key={store.countdown}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1.2, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="text-white font-black text-[150px] drop-shadow-[0_0_30px_rgba(255,255,255,0.8)]"
+            >
+              {store.countdown}
+            </motion.div>
+          </div>
+        )}
+        
+        {/* 일시정지 버튼 */}
+        {store.audioReady && !store.countdown && !store.showRoundClear && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={togglePause}
+            className="absolute top-4 right-4 z-40 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-lg text-white font-bold text-sm transition-all duration-200 border border-white/30"
+          >
+            {store.isPaused ? '▶️ 계속하기' : '⏸️ 일시정지'}
+          </motion.button>
+        )}
+        
+        {/* 일시정지 오버레이 */}
+        {store.isPaused && (
+          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center px-8"
+            >
+              <div className="text-white text-6xl font-black mb-8">
+                ⏸️
+              </div>
+              <div className="text-white text-3xl font-black mb-12">
+                일시정지
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={togglePause}
+                  className="w-64 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold text-xl rounded-xl transition-all duration-200 shadow-lg"
+                >
+                  ▶️ 계속하기
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (confirm('게임을 포기하고 메인으로 돌아갈까요?')) {
+                      window.location.reload();
+                    }
+                  }}
+                  className="w-64 px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold text-xl rounded-xl transition-all duration-200 shadow-lg"
+                >
+                  🏳️ 포기하기
+                </button>
+              </div>
+              
+              <div className="mt-8 text-gray-300 text-sm">
+                ESC 키로도 일시정지 가능
+              </div>
+            </motion.div>
+          </div>
+        )}
+        
+        {/* 라운드 클리어 오버레이 */}
+        {store.showRoundClear && (
+          <div className="absolute inset-0 flex items-start justify-center pt-32 z-50">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 180 }}
+              transition={{ type: 'spring', duration: 0.6 }}
+              className="text-center"
+            >
+              <div className="text-yellow-400 font-black text-5xl mb-4 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]">
+                🎉 ROUND CLEAR! 🎉
+              </div>
+              {/* 폭죽 효과 */}
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
+                  animate={{
+                    scale: [0, 1.5, 0],
+                    x: Math.cos((i * Math.PI * 2) / 8) * 150,
+                    y: Math.sin((i * Math.PI * 2) / 8) * 150,
+                    opacity: [1, 1, 0]
+                  }}
+                  transition={{ duration: 1, delay: 0.2 }}
+                  className="absolute text-4xl"
+                  style={{ left: '50%', top: '50%' }}
+                >
+                  ✨
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        )}
+        
         {/* React UI */}
         <div className="absolute inset-0">
           <GameUI
