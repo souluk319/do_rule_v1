@@ -4,7 +4,7 @@
 
 **절대음 C(도)를 구분하는 음성 가창 게임**
 
-[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-KUGNUS%20Proprietary-red.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-blue.svg)](https://www.typescriptlang.org/)
 
@@ -283,7 +283,9 @@ npm run build
 
 ## 📄 라이선스
 
-MIT License
+**KUGNUS 고유 라이센스**
+
+© 2025.11.11 KUGNUS. All Rights Reserved.
 
 ---
 
