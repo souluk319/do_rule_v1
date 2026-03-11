@@ -158,8 +158,8 @@ const GameCanvas: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-0 pointer-events-none" />
         {store.cameraMode && (
           <>
-            <div className="absolute inset-x-1 top-2 bottom-[148px] z-10">
-              <div className="relative h-full w-full overflow-hidden rounded-[28px] border border-white/14 bg-black/20 shadow-[0_24px_64px_rgba(0,0,0,0.22)]">
+            <div className="absolute inset-0 z-10">
+              <div className="relative h-full w-full overflow-hidden bg-black/20 shadow-2xl">
                 <video
                   ref={handleVideoRef}
                   autoPlay
@@ -271,7 +271,7 @@ const GameCanvas: React.FC = () => {
             animate={{ opacity: 1 }}
             onClick={togglePause}
             aria-label={store.isPaused ? '계속하기' : '일시정지'}
-            className="absolute top-5 right-5 z-40 flex h-8 w-8 items-center justify-center rounded-lg bg-black/20 backdrop-blur-md border border-white/20 text-white text-[14px] transition-all duration-200 shadow-lg hover:bg-white/10"
+            className="absolute top-11 right-5 z-40 flex h-8 w-8 items-center justify-center rounded-lg bg-black/20 backdrop-blur-md border border-white/20 text-white text-[14px] transition-all duration-200 shadow-lg hover:bg-white/10"
           >
             {store.isPaused ? '▶' : '||'}
           </motion.button>
@@ -368,8 +368,8 @@ const GameCanvas: React.FC = () => {
             isAttempting={store.isAttempting}
           />
 
-          {/* 피아노 건반 */}
-          <div className="absolute bottom-32 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
+          {/* 피아노 건반 (위치를 아래로 내림) */}
+          <div className="absolute bottom-12 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
             <PianoKeyboard
               detectedNote={store.detectedNote}
               targetNote={targetNote}

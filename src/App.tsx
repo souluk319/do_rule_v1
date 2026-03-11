@@ -39,7 +39,7 @@ function App() {
   };
 
   return (
-    <div className="w-full h-full fixed inset-0 overflow-hidden bg-gradient-to-br from-purple-600 via-pink-500 to-blue-500">
+    <div className="w-full h-full fixed inset-0 overflow-hidden bg-black">
       <AnimatePresence mode="wait">
         {screen === 'menu' && (
           <motion.div

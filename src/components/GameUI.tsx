@@ -36,8 +36,8 @@ const GameUI: React.FC<GameUIProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
-      {/* 상단: 닉네임, 라운드, 점수 */}
-      <div className="p-3 pt-4 space-y-2">
+      {/* 상단: 닉네임, 라운드, 점수 (상단 여유 여백 확보) */}
+      <div className="p-3 pt-12 space-y-2">
         {/* 닉네임 (중앙) */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -85,8 +85,8 @@ const GameUI: React.FC<GameUIProps> = ({
         </div>
       </div>
 
-      {/* 중앙: 단어 표시 (위쪽으로 이동) */}
-      <div className="flex-1 flex items-center justify-center" style={{ marginTop: '-120px' }}>
+      {/* 중앙: 단어 표시 (위치를 아래로 살짝 내림) */}
+      <div className="flex-1 flex items-center justify-center" style={{ marginTop: '-20px' }}>
         {!currentWord ? (
           <div className="text-center">
             <div className="text-2xl font-bold text-white/60 mb-2">준비 중...</div>
@@ -157,8 +157,8 @@ const GameUI: React.FC<GameUIProps> = ({
         )}
       </div>
 
-      {/* 하단: 타이머 */}
-      <div className="p-3 pb-32">
+      {/* 하단: 타이머 (위치를 더 아래로 내림) */}
+      <div className="p-3 pb-12">
         <motion.div
           animate={{
             scale: isLowTime ? [1, 1.05, 1] : 1,
@@ -172,7 +172,7 @@ const GameUI: React.FC<GameUIProps> = ({
           {/* 타이머 바 */}
           <div className="relative h-4 bg-white/10">
             <motion.div
-              className={`absolute inset-y-0 left-0 transition-colors duration-300 ${isLowTime ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-r from-blue-400 to-purple-500'
+              className={`absolute inset-y-0 left-0 transition-colors duration-300 ${isLowTime ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-r from-blue-400 to-cyan-500'
                 }`}
               initial={{ width: '100%' }}
               animate={{ width: `${progressPercent}%` }}
