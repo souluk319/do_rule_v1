@@ -157,8 +157,8 @@ const GameUI: React.FC<GameUIProps> = ({
         )}
       </div>
 
-      {/* 하단: 타이머 (위치를 더 아래로 내림) */}
-      <div className="p-3 pb-12">
+      {/* 하단: 타이머 (건반과 겹치지 않게 하단 끝으로 밀착) */}
+      <div className="p-3 pb-4">
         <motion.div
           animate={{
             scale: isLowTime ? [1, 1.05, 1] : 1,

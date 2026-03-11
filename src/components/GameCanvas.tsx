@@ -368,8 +368,8 @@ const GameCanvas: React.FC = () => {
             isAttempting={store.isAttempting}
           />
 
-          {/* 피아노 건반 (위치를 아래로 내림) */}
-          <div className="absolute bottom-12 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
+          {/* 피아노 건반 (하단 끝으로 더 내림) */}
+          <div className="absolute bottom-4 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
             <PianoKeyboard
               detectedNote={store.detectedNote}
               targetNote={targetNote}
