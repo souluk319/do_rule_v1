@@ -59,44 +59,44 @@ export class OllamaService {
    */
   async generatePrompts(charLen: number, count: number = 8, difficulty: string = 'normal'): Promise<string[]> {
     console.log(`\n🎲 제시어 생성 시작: ${charLen}글자 x ${count}개`);
-    
+
     // ===== Plan A: EEVE 시도 =====
     console.log('📍 Plan A: EEVE 모델 시도...');
     const eeveWords = await this.tryGenerateWithModel('eeve', charLen, count, difficulty);
-    
+
     if (eeveWords.length >= count) {
       console.log(`✅ Plan A 성공! EEVE가 ${eeveWords.length}개 생성`);
       return eeveWords.slice(0, count);
     }
-    
+
     console.log(`⚠️ Plan A 부족: EEVE ${eeveWords.length}/${count}개만 생성`);
-    
+
     // ===== Plan B: gemma2:2b로 부족한 만큼만 생성 =====
     const needed = count - eeveWords.length;
     console.log(`📍 Plan B: gemma2:2b로 ${needed}개 추가 생성 시도...`);
     const gemmaWords = await this.tryGenerateWithModel('gemma2:2b', charLen, needed, difficulty);
-    
+
     const combined = [...eeveWords, ...gemmaWords];
-    
+
     if (combined.length >= count) {
       console.log(`✅ Plan B 성공! 총 ${combined.length}개 (EEVE ${eeveWords.length} + Gemma ${gemmaWords.length})`);
       return combined.slice(0, count);
     }
-    
+
     console.log(`⚠️ Plan B 부족: 총 ${combined.length}/${count}개만 생성`);
-    
+
     // ===== Plan C: 기본 단어로 나머지 채우기 =====
     console.log('📍 Plan C: 기본 단어 풀 사용...');
     const defaultWords = this.getDefaultWords(charLen);
     const finalWords = [...combined];
-    
+
     while (finalWords.length < count) {
       const randomWord = defaultWords[Math.floor(Math.random() * defaultWords.length)];
       if (!finalWords.includes(randomWord)) {
         finalWords.push(randomWord);
       }
     }
-    
+
     console.log(`✅ Plan C 완료! 총 ${finalWords.length}개 생성됨\n`);
     return finalWords.slice(0, count);
   }
@@ -105,27 +105,27 @@ export class OllamaService {
    * 특정 모델로 단어 생성 시도
    */
   private async tryGenerateWithModel(
-    model: string, 
-    charLen: number, 
-    count: number, 
+    model: string,
+    charLen: number,
+    count: number,
     difficulty: string
   ): Promise<string[]> {
     try {
       const prompt = this.buildPromptPrompt(charLen, difficulty);
-      const options = model === 'eeve' 
+      const options = model === 'eeve'
         ? {
-            temperature: 0.8,
-            top_p: 0.9,
-            top_k: 50,
-            num_predict: 120,
-            repeat_penalty: 1.3,
-            stop: ["\n\n\n", "예시:", "설명:", "조건:"]
-          }
+          temperature: 0.8,
+          top_p: 0.9,
+          top_k: 50,
+          num_predict: 120,
+          repeat_penalty: 1.3,
+          stop: ["\n\n\n", "예시:", "설명:", "조건:"]
+        }
         : {
-            temperature: 0.8,
-            top_p: 0.9,
-            num_predict: 150
-          };
+          temperature: 0.8,
+          top_p: 0.9,
+          num_predict: 150
+        };
 
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -144,27 +144,27 @@ export class OllamaService {
 
       const data = await response.json();
       const text = data.response || '';
-      
+
       console.log(`  🤖 ${model} 원본 응답:`, text.substring(0, 200));
-      
+
       // 응답 파싱
       const lines = text.split('\n').filter((l: string) => l.trim().length > 0);
       const items: string[] = [];
-      
+
       for (const line of lines) {
         let cleaned = line
           .replace(/^[\d\-.\s)]+/, '')
           .replace(/[^\uAC00-\uD7A3]/g, '')
           .trim();
-        
+
         if (cleaned.length === charLen && !items.includes(cleaned)) {
           items.push(cleaned);
           console.log(`    ✓ "${cleaned}"`);
         }
-        
+
         if (items.length >= count) break;
       }
-      
+
       console.log(`  ✅ ${model}: ${items.length}개 파싱 성공`);
       return items;
     } catch (error) {
@@ -204,7 +204,7 @@ export class OllamaService {
   private buildPromptPrompt(charLen: number, _difficulty: string): string {
     // EEVE/gemma 공용: 명확한 프롬프트
     const examples = this.getExamplesForLength(charLen);
-    
+
     return `아래 예시처럼 정확히 ${charLen}글자인 재미있는 한국어 명사를 10개 생성하세요.
 번호나 설명 없이 단어만 한 줄에 하나씩 출력하세요.
 
@@ -242,53 +242,60 @@ ${examples[7]}
   private getDefaultWords(charLen: number): string[] {
     const words: Record<number, string[]> = {
       4: [
-        '불닭볶음', '양념치킨', '김치찌개', '된장국물', '비빔밥맛',
-        '햇살따뜻', '바람시원', '구름하늘', '눈사람만', '봄꽃향기',
-        '친구사이', '가족여행', '학교축제', '회사야근', '주말휴식',
-        '피자먹기', '카페라떼', '게임하자', '영화보기', '음악듣기',
-        '책은무슨', '산책가자', '운동하자', '공부하기', '잠자리채',
-        '행복해요', '사랑해요', '고마워요', '미안해요', '힘내세요',
-        '웃어봐요', '울지마요', '괜찮아요', '좋아해요', '싫어해요',
-        '맛있어요', '배고파요', '졸려요즘', '피곤해요', '힘들어요',
-        '찌개지옥', '된장요정', '비빔폭탄', '비빔대왕', '피자공주',
-        '햇살쨍쨍', '바람슝슝', '하늘멍때', '눈펑펑이', '꽃향폭격',
-        '찐친모드', '가족대란', '축제폭발', '야근지옥', '휴식룩인',
-        '피자파티', '라떼추가', '겜접속중', '팝콘전쟁', '비트탑승',
-        '안경선배', '산책가자', '운동필요', '공부중임', '잠온다요',
-        '행복폭발', '심쿵주의', '감사폭풍', '사죄모드', '치킨나라'
+        '김치찌개', '된장찌개', '순대국밥', '불닭볶음', '양념치킨',
+        '간장새우', '크림수프', '마라탕면', '치즈김밥', '참치마요',
+        '초코라떼', '딸기우유', '바닐라빈', '제로콜라', '망고빙수',
+        '수박주스', '카페라떼', '핫초코잔', '허니버터', '소금빵집',
+        '봄꽃향기', '여름비옷', '가을하늘', '겨울바다', '노을빛깔',
+        '별빛야경', '구름한점', '새벽공기', '달빛산책', '바람결따',
+        '학교축제', '주말여행', '야근지옥', '월급로그', '퇴근소리',
+        '출근버스', '점심시간', '회의지옥', '퇴사각서', '휴가계획',
+        '게임천재', '레벨업각', '보스전투', '콤보장인', '연습모드',
+        '치킨나라', '피자나라', '디저트왕', '간식천국', '야식출동',
+        '심쿵주의', '행복가득', '웃음벨각', '감동실화', '멍때리기',
+        '인생네컷', '짤방수집', '밈중독자', '고양이짤', '강아지풀',
+        '친구모임', '가족사진', '비밀일기', '소원빌기', '추억여행',
+        '운동시작', '산책코스', '독서타임', '영화감상', '음악감상',
+        '달콤상상', '반짝아이', '말랑복숭', '폭신이불', '방구석왕'
       ],
       5: [
-        '불닭볶음면', '양념갈비맛', '김치빈대떡', '된장국물맛', '비빔밥비벼',
-        '햇살따뜻해', '바람시원해', '구름많은날', '눈사람만들', '봄꽃향기좋',
-        '친구만나자', '가족여행가', '학교축제다', '회사야근중', '주말휴식해',
-        '피자먹고파', '커피마시자', '게임하고파', '영화보고파', '음악듣고파',
-        '책읽고싶다', '산책가고파', '운동하자요', '공부해야지', '잠자고싶다',
-        '행복하세요', '사랑합니다', '고맙습니다', '미안합니다', '힘내요허니',
-        '웃어봅시다', '울지마세요', '괜찮습니다', '좋아합니다', '싫어합니다',
-        '맛있습니다', '배고픕니다', '졸립니다요', '피곤합니다', '힘듭니다요'
+        '불닭볶음면', '김치볶음밥', '치즈계란말', '얼큰순대국', '로제떡볶이',
+        '새우튀김각', '쫄면곱빼기', '수제왕돈까', '매콤닭강정', '달콤핫도그',
+        '딸기생크림', '초코크로플', '바닐라마카', '망고스무디', '레몬에이드',
+        '겨울붕어빵', '노릇군고구', '쫀득인절미', '달달호떡집', '소금버터롤',
+        '새벽감성샷', '노을맛집길', '달빛산책로', '여름바다빛', '가을단풍길',
+        '비오는날씨', '반짝별조각', '폭신구름빵', '잔잔파도소', '초록숲내음',
+        '주말영화관', '출근전쟁터', '퇴근러시끝', '월요일싫어', '금요일만세',
+        '점심메뉴판', '야근탈출각', '휴가계획표', '여행출발전', '통장잔고봄',
+        '게임한판더', '랭크승급전', '보스레이드', '콤보연습장', '튜토리얼끝',
+        '고양이집사', '강아지산책', '햄스터간식', '오리발자국', '펭귄뒤뚱이',
+        '친구소환중', '가족모임날', '추억사진첩', '비밀아지트', '소원빌어봐',
+        '오늘도성장', '행복충전중', '심쿵주의보', '기분좋은날', '웃음참기챌',
+        '음악듣는중', '영화보고파', '산책가고파', '운동시작해', '독서몰입중'
       ],
       6: [
-        '표정관리안됨', '양념치킨먹기', '김치찌개끊기', '된장국마니아', '인생말아먹기기',
-        '감정관리안됨', '바람시원하다', '구름많은하늘', '눈사람만들기', '봄꽃향기좋다',
-        '친구만들고파', '가족여행가자', '학교축제노잼', '야근작작해요', '주식떡상기원',
-        '피자먹고싶어', '커피마시자구', '게임하는여자', '영화보고싶다', '음악듣고싶다',
-        '책읽고싶어요', '산책가고싶어', '운동하고싶다', '공부해야해요', '잠자고싶어요',
-        '행복하세요오', '사랑합니다아', '고맙습니다아', '미안합니다아', '힘내세요오오',
-        '웃어봐요오오', '울지마세요오', '괜찮습니다아', '좋아합니다아', '싫어합니다아',
-        '맛있습니다아', '배고픕니다아', '졸립니다아아', '피곤합니다아', '힘듭니다아잉'
+        '오늘치킨먹자', '불닭볶음추가', '김치찌개한입', '수제버거한입', '로제떡볶최고',
+        '마라탕먹는중', '치즈피자한판', '달콤탕후루각', '초코라떼수혈', '망고빙수맛집',
+        '새벽감성충전', '노을빛깔미침', '바다냄새좋다', '구름모양신기', '봄바람살랑임',
+        '여름휴가출발', '가을단풍구경', '겨울눈사람짱', '달빛산책코스', '별빛야경명소',
+        '월요일너무김', '금요일만세다', '출근길사람들', '퇴근하고눕자', '점심시간순삭',
+        '야근이제그만', '주말약속가득', '휴가계획완료', '통장잔고비상', '회의시간끝나',
+        '게임한판가자', '랭크점수상승', '보스패턴숙지', '콤보연습완료', '실전스테이지',
+        '고양이집사력', '강아지산책중', '햄스터간식통', '펭귄걸음신기', '오리꽥꽥출근',
+        '친구들이수다', '가족사진다시', '추억앨범꺼내', '비밀아지트짱', '소원하나빌자',
+        '행복충전완료', '심쿵주의발령', '웃음참기실패', '기분좋아서흥', '오늘도파이팅'
       ]
     };
     const list = words[charLen] || words[4];
-    
+
     // 랜덤 셔플
     const shuffled = [...list];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    
+
     console.log(`🎲 폴백 단어 생성 (${charLen}글자, 셔플됨):`, shuffled.slice(0, 5));
     return shuffled;
   }
 }
-

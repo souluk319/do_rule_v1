@@ -233,12 +233,12 @@ ollama serve
 # 프로젝트 실행
 npm install
 npm run dev
-# → http://localhost:3001
+# → http://localhost:3000
 ```
 
 ### 외부 접속 (mobile or PC)
 ```bash
-ngrok http 3001
+ngrok http 3000
 # → https://xxx.ngrok-free.dev
 ```
 
