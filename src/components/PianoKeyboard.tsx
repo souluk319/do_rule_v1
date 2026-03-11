@@ -43,9 +43,9 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
     <div className="relative">
       {/* 타이틀 - 더 명확하게 */}
       <div className="text-center mb-3">
-        <div className="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-2 rounded-full shadow-lg">
-          <div className="text-sm text-gray-900 font-black">
-            🎯 목표 음정: {targetNote}
+        <div className="inline-block bg-black/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 shadow-lg">
+          <div className="text-sm text-white font-black drop-shadow-md">
+            🎯 목표 음정: <span className="text-yellow-400">{targetNote}</span>
           </div>
         </div>
       </div>

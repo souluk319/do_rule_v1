@@ -36,12 +36,14 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
   };
 
   return (
-    <div 
-      className="w-full min-h-[100dvh] flex items-center justify-center p-5 overflow-y-auto relative bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url(/image/dorule_img.png)' }}
-    >
-      {/* 전체 화면을 가리는 블러(backdrop-blur)를 없애고, 상/하단만 까맣게 처리하여 인물 강조 */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-0 pointer-events-none" />
+    <div className="w-full min-h-[100dvh] flex items-center justify-center bg-gray-900 relative">
+      {/* PC에서 양옆 여백을 두고 모바일 비율로 가운데 고정시키는 래퍼(Wrapper) */}
+      <div 
+        className="w-full h-[100dvh] max-w-[430px] flex items-center justify-center p-5 overflow-y-auto relative bg-cover bg-center bg-no-repeat shadow-2xl"
+        style={{ backgroundImage: 'url(/image/dorule_img.png)', aspectRatio: '390 / 844' }}
+      >
+        {/* 상/하단만 까맣게 처리하여 인물 강조 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-0 pointer-events-none" />
 
       {/* flex-col과 justify-end를 추가하여 전체적인 블록을 아래쪽으로 쏠리게 만듦. pt-20으로 상단 여유 공간 확보 */}
       <motion.div
@@ -66,12 +68,12 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
           </p>
         </motion.div>
 
-        {/* 카드: 패딩 더 축소 (p-4 -> p-3.5) */}
+        {/* 카드: 투명도 높임(bg-black/20), 블러 약하게(backdrop-blur-sm) */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="bg-black/50 backdrop-blur-xl rounded-xl p-3 shadow-2xl border border-white/20"
+          className="bg-black/20 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-white/20"
         >
           {/* 닉네임 */}
           <div className="mb-2.5">
@@ -87,7 +89,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
               }}
               placeholder="닉네임을 입력하세요"
               maxLength={10}
-              className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/30 text-white placeholder-white/40 focus:border-white focus:bg-white/20 focus:outline-none text-center text-[13px] font-medium transition-all"
+              className="w-full px-3 py-2 rounded-lg bg-white/20 backdrop-blur-md border border-white/50 text-white placeholder-white/60 focus:border-white focus:bg-white/30 focus:outline-none text-center text-[13px] font-bold shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all"
             />
           </div>
 
@@ -108,7 +110,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                   className={`py-2 rounded-lg font-bold text-[13px] transition-all ${
                     gender === g
                       ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400'
-                      : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                      : 'bg-black/40 backdrop-blur-md text-white border border-white/40 hover:bg-white/30 shadow-[0_2px_4px_rgba(0,0,0,0.3)]'
                   }`}
                 >
                   {g === 'male' ? '남 👨' : '여 👩'}
@@ -138,7 +140,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
                   className={`py-1.5 rounded-lg font-bold text-[11px] transition-all flex flex-col items-center justify-center gap-0.5 ${
                     difficulty === d.key
                       ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)] border border-purple-400'
-                      : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                      : 'bg-black/40 backdrop-blur-md text-white border border-white/40 hover:bg-white/30 shadow-[0_2px_4px_rgba(0,0,0,0.3)]'
                   }`}
                 >
                   <span>{d.label.split(' ')[0]}</span>
@@ -149,7 +151,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
           </div>
 
           {/* 카메라 모드 */}
-          <div className="mb-3 bg-white/5 rounded-lg p-2 border border-white/10 flex items-center justify-between">
+          <div className="mb-3 bg-black/40 backdrop-blur-md rounded-lg p-2 border border-white/40 shadow-[0_2px_4px_rgba(0,0,0,0.3)] flex items-center justify-between">
             <label className="text-white text-[11px] font-bold">
               📷 카메라 모드 (숏폼용)
             </label>
@@ -192,7 +194,7 @@ export default function MainMenu({ onStartGame }: MainMenuProps) {
           </motion.button>
         </motion.div>
       </motion.div>
+      </div>
     </div>
   );
 }
-

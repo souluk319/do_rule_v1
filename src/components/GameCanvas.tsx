@@ -51,7 +51,7 @@ const GameCanvas: React.FC = () => {
         togglePause();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [store.audioReady, store.countdown, store.showRoundClear, togglePause]);
@@ -84,14 +84,14 @@ const GameCanvas: React.FC = () => {
   // 목표 음정 계산
   const calculateTargetPitches = (): string[] => {
     if (!store.currentWord) return [];
-    
+
     const notes = store.gender === 'male'
       ? { high: 'C4', low: 'C3' }
       : { high: 'C5', low: 'C4' };
-    
+
     const isReverse = store.difficulty === 'hard';
     const targetPitches: string[] = [];
-    
+
     for (let i = 0; i < store.currentWord.length; i++) {
       if (i === store.currentAttempt) {
         targetPitches.push(isReverse ? notes.low : notes.high);
@@ -99,7 +99,7 @@ const GameCanvas: React.FC = () => {
         targetPitches.push(isReverse ? notes.high : notes.low);
       }
     }
-    
+
     return targetPitches;
   };
 
@@ -148,8 +148,14 @@ const GameCanvas: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 overflow-hidden">
-      <div className="relative w-full h-full max-w-[430px] max-h-[932px]" style={{ aspectRatio: '390 / 844' }}>
+    <div className="w-full h-full flex items-center justify-center bg-gray-900 relative">
+      {/* PC에서 모바일 비율로 가운데 고정시키는 래퍼(Wrapper) */}
+      <div
+        className="w-full h-[100dvh] max-w-[430px] flex items-center justify-center relative bg-cover bg-center bg-no-repeat shadow-2xl overflow-hidden"
+        style={{ backgroundImage: 'url(/image/dorule_img.png)', aspectRatio: '390 / 844' }}
+      >
+        {/* 인물 가리지 않는 상하단 그라데이션 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-0 pointer-events-none" />
         {store.cameraMode && (
           <>
             <div className="absolute inset-x-1 top-2 bottom-[148px] z-10">
@@ -257,7 +263,7 @@ const GameCanvas: React.FC = () => {
             </motion.div>
           </div>
         )}
-        
+
         {/* 일시정지 버튼 */}
         {store.audioReady && !!store.currentWord && !store.countdown && !store.showRoundClear && (
           <motion.button
@@ -265,54 +271,53 @@ const GameCanvas: React.FC = () => {
             animate={{ opacity: 1 }}
             onClick={togglePause}
             aria-label={store.isPaused ? '계속하기' : '일시정지'}
-            className="absolute top-5 right-5 z-40 flex h-8 w-8 items-center justify-center text-white text-[20px] leading-none transition-all duration-200 drop-shadow-[0_4px_12px_rgba(0,0,0,0.28)]"
+            className="absolute top-5 right-5 z-40 flex h-8 w-8 items-center justify-center rounded-lg bg-black/20 backdrop-blur-md border border-white/20 text-white text-[14px] transition-all duration-200 shadow-lg hover:bg-white/10"
           >
-            {store.isPaused ? '▶️' : '⏸️'}
+            {store.isPaused ? '▶' : '||'}
           </motion.button>
         )}
-        
-        {/* 일시정지 오버레이 */}
+
+        {/* 일시정지 오버레이 (블러 약하게 조정) */}
         {store.isPaused && (
-          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-md">
+          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-center px-8"
             >
-              <div className="text-white text-6xl font-black mb-8">
-                ⏸️
+              <div className="text-white text-3xl font-black mb-10 drop-shadow-lg" style={{ fontFamily: '"Jua", sans-serif' }}>
+                PAUSED
               </div>
-              <div className="text-white text-3xl font-black mb-12">
-                일시정지
-              </div>
-              
+
               <div className="space-y-4">
                 <button
                   onClick={togglePause}
-                  className="w-64 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold text-xl rounded-xl transition-all duration-200 shadow-lg"
+                  className="w-64 px-8 py-4 bg-white/20 backdrop-blur-xl border border-white/30 text-white font-black text-xl rounded-2xl transition-all duration-200 shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:bg-white/30 hover:scale-105 active:scale-95"
+                  style={{ fontFamily: '"Jua", sans-serif' }}
                 >
-                  ▶️ 계속하기
+                  계속 하기
                 </button>
-                
+
                 <button
                   onClick={() => {
                     if (confirm('게임을 포기하고 메인으로 돌아갈까요?')) {
                       window.location.reload();
                     }
                   }}
-                  className="w-64 px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold text-xl rounded-xl transition-all duration-200 shadow-lg"
+                  className="w-64 px-8 py-4 bg-red-500/40 backdrop-blur-xl border border-red-400/30 text-white font-black text-xl rounded-2xl transition-all duration-200 shadow-[0_8px_32px_rgba(255,0,0,0.2)] hover:bg-red-500/60 hover:scale-105 active:scale-95"
+                  style={{ fontFamily: '"Jua", sans-serif' }}
                 >
-                  🏳️ 포기하기
+                  포기 하기
                 </button>
               </div>
-              
+
               <div className="mt-8 text-gray-300 text-sm">
                 ESC 키로도 일시정지 가능
               </div>
             </motion.div>
           </div>
         )}
-        
+
         {/* 라운드 클리어 오버레이 */}
         {store.showRoundClear && (
           <div className="absolute inset-0 flex items-start justify-center pt-32 z-50">
@@ -347,7 +352,7 @@ const GameCanvas: React.FC = () => {
             </motion.div>
           </div>
         )}
-        
+
         {/* React UI */}
         <div className="absolute inset-0">
           <GameUI
@@ -362,7 +367,7 @@ const GameCanvas: React.FC = () => {
             targetPitches={targetPitches}
             isAttempting={store.isAttempting}
           />
-          
+
           {/* 피아노 건반 */}
           <div className="absolute bottom-32 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
             <PianoKeyboard

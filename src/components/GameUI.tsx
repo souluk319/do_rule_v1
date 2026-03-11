@@ -28,7 +28,7 @@ const GameUI: React.FC<GameUIProps> = ({
 }) => {
   const progressPercent = (timeRemaining / 8) * 100;
   const isLowTime = timeRemaining < 5;
-  
+
   // 단어 글자 배열 메모이제이션 (불필요한 리렌더링 방지)
   const wordChars = useMemo(() => {
     return currentWord ? currentWord.split('') : [];
@@ -44,8 +44,8 @@ const GameUI: React.FC<GameUIProps> = ({
           animate={{ y: 0, opacity: 1 }}
           className="text-center"
         >
-          <div className="inline-block bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-md px-5 py-1.5 rounded-full border border-purple-400/30">
-            <div className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-blue-300">
+          <div className="inline-block bg-black/40 backdrop-blur-md px-5 py-1.5 rounded-full border border-white/20 shadow-lg">
+            <div className="text-sm font-black text-white drop-shadow-md">
               {nickname}
             </div>
           </div>
@@ -57,95 +57,100 @@ const GameUI: React.FC<GameUIProps> = ({
           <motion.div
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-purple-400/30"
+            className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-lg text-center min-w-[80px]"
           >
-            <div className="text-xs text-purple-300 font-medium">Round</div>
-            <div className="text-2xl font-black text-white">{round}</div>
+            <div className="text-[10px] text-white/60 font-black uppercase tracking-wider">Round</div>
+            <div className="text-2xl font-black text-white leading-none mt-0.5">{round}</div>
           </motion.div>
 
           {/* 점수 & 콤보 */}
           <motion.div
             initial={{ x: 20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-md px-3 py-1.5 rounded-xl border border-blue-400/30 text-right"
+            className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 shadow-lg text-center min-w-[80px]"
           >
-            <div className="text-xs text-blue-300 font-medium">Score</div>
-            <div className="text-2xl font-black text-white">{score}</div>
+            <div className="text-[10px] text-white/60 font-black uppercase tracking-wider">Score</div>
+            <div className="text-2xl font-black text-white leading-none mt-0.5">{score}</div>
             {combo > 1 && (
               <motion.div
                 initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="text-xs font-bold text-yellow-300 mt-1"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 0.5 }}
+                className="text-sm font-black text-yellow-400 mt-1 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]"
               >
-                {combo}x COMBO
+                {combo} COMBO 🔥
               </motion.div>
             )}
           </motion.div>
         </div>
       </div>
 
-          {/* 중앙: 단어 표시 (위쪽으로 이동) */}
-          <div className="flex-1 flex items-center justify-center" style={{ marginTop: '-120px' }}>
-            {!currentWord ? (
-              <div className="text-center">
-                <div className="text-2xl font-bold text-white/60 mb-2">준비 중...</div>
-                <div className="text-sm text-white/40">게임을 시작합니다</div>
-              </div>
-            ) : (
+      {/* 중앙: 단어 표시 (위쪽으로 이동) */}
+      <div className="flex-1 flex items-center justify-center" style={{ marginTop: '-120px' }}>
+        {!currentWord ? (
+          <div className="text-center">
+            <div className="text-2xl font-bold text-white/60 mb-2">준비 중...</div>
+            <div className="text-sm text-white/40">게임을 시작합니다</div>
+          </div>
+        ) : (
           <div className="flex flex-col items-center gap-2">
             {/* 단어 */}
             <div className="flex gap-2">
               {wordChars.map((char, index) => {
-              const isCurrentFocus = index === currentAttempt;
-              const isSuccess = characterStatus[index];
-              const pitch = targetPitches[index] || '';
+                const isCurrentFocus = index === currentAttempt;
+                const isSuccess = characterStatus[index];
+                const pitch = targetPitches[index] || '';
 
-              return (
-                <div
-                  key={`${currentWord}-${index}`}
-                  className={`
-                    relative w-14 h-18 flex flex-col items-center justify-center
-                    rounded-xl backdrop-blur-md
-                    ${isSuccess ? 'bg-green-500/30 border-2 border-green-400' : 'bg-black/40 border-2 border-white/20'}
-                    ${isCurrentFocus && isAttempting ? 'ring-4 ring-blue-400 shadow-lg shadow-blue-400/50' : ''}
-                  `}
-                >
-                  {/* 글자 */}
+                return (
                   <div
-                    className={`text-3xl font-black ${
-                      isSuccess ? 'text-green-300' : 'text-white'
-                    }`}
+                    key={`${currentWord}-${index}`}
+                    className={`
+                    relative w-16 h-22 flex flex-col items-center justify-center
+                    rounded-2xl backdrop-blur-md transition-all duration-300
+                    ${isSuccess
+                        ? 'bg-green-500/40 border-2 border-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]'
+                        : 'bg-black/40 border-2 border-white/20 shadow-lg'}
+                    ${isCurrentFocus && isAttempting
+                        ? 'ring-4 ring-yellow-400 scale-110 z-10 shadow-[0_0_20px_rgba(250,204,21,0.5)]'
+                        : ''}
+                  `}
                   >
-                    {char}
-                  </div>
-                  
-                  {/* 음정 표시 */}
-                  <div className="text-[10px] font-bold text-white/60 mt-1">
-                    {pitch}
-                  </div>
-
-                  {/* 성공 체크마크 */}
-                  {isSuccess && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-xs">✓</span>
+                    {/* 글자 - Jua 폰트 적용 */}
+                    <div
+                      className={`text-3xl font-black drop-shadow-lg pt-1 ${isSuccess ? 'text-green-300' : 'text-white'
+                        }`}
+                      style={{ fontFamily: '"Jua", sans-serif' }}
+                    >
+                      {char}
                     </div>
-                  )}
-                </div>
-              );
+
+                    {/* 음정 표시 */}
+                    <div className="text-[11px] font-black text-white/70 mt-1 uppercase tracking-tighter">
+                      {pitch}
+                    </div>
+
+                    {/* 성공 체크마크 */}
+                    {isSuccess && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </div>
+                );
               })}
             </div>
 
             {/* 진행 안내 (컴팩트) */}
             {isAttempting && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full"
-            >
-              <div className="text-xs font-bold text-white">
-                시도 {currentAttempt + 1} / {currentWord.length}
-              </div>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full"
+              >
+                <div className="text-xs font-bold text-white">
+                  시도 {currentAttempt + 1} / {currentWord.length}
+                </div>
+              </motion.div>
             )}
 
           </div>
@@ -165,11 +170,10 @@ const GameUI: React.FC<GameUIProps> = ({
           className="bg-black/40 backdrop-blur-md rounded-xl overflow-hidden"
         >
           {/* 타이머 바 */}
-          <div className="relative h-3 bg-white/10">
+          <div className="relative h-4 bg-white/10">
             <motion.div
-              className={`absolute inset-y-0 left-0 transition-colors duration-300 ${
-                isLowTime ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-purple-600'
-              }`}
+              className={`absolute inset-y-0 left-0 transition-colors duration-300 ${isLowTime ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-gradient-to-r from-blue-400 to-purple-500'
+                }`}
               initial={{ width: '100%' }}
               animate={{ width: `${progressPercent}%` }}
               transition={{ duration: 0.3, ease: 'linear' }}
@@ -180,9 +184,8 @@ const GameUI: React.FC<GameUIProps> = ({
           <div className="px-3 py-2 flex items-center justify-between">
             <div className="text-xs text-white/60 font-medium">Time</div>
             <div
-              className={`text-xl font-black transition-colors ${
-                isLowTime ? 'text-red-400' : 'text-white'
-              }`}
+              className={`text-xl font-black transition-colors ${isLowTime ? 'text-red-400' : 'text-white'
+                }`}
             >
               {timeRemaining.toFixed(1)}s
             </div>

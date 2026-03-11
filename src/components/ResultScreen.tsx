@@ -29,15 +29,23 @@ export default function ResultScreen({ result, onRetry, onBackToMenu }: ResultSc
   };
 
   return (
-    <div className="w-full h-screen flex items-center justify-center p-6">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        className="w-full max-w-md"
+    <div className="w-full h-full flex items-center justify-center bg-gray-900 relative">
+      {/* PC에서 모바일 비율로 가운데 고정시키는 래퍼(Wrapper) */}
+      <div 
+        className="w-full h-[100dvh] max-w-[430px] flex items-center justify-center p-6 relative bg-cover bg-center bg-no-repeat shadow-2xl overflow-hidden"
+        style={{ backgroundImage: 'url(/image/dorule_img.png)', aspectRatio: '390 / 844' }}
       >
-        {/* 결과 카드 */}
-        <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl border border-white/20">
+        {/* 인물 가리지 않는 상하단 그라데이션 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80 z-0 pointer-events-none" />
+
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+          className="w-full max-w-sm relative z-10"
+        >
+          {/* 결과 카드 */}
+          <div className="bg-black/30 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
           {/* 타이틀 */}
           <motion.h2
             initial={{ y: -20 }}
@@ -65,15 +73,15 @@ export default function ResultScreen({ result, onRetry, onBackToMenu }: ResultSc
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-2 gap-4 mb-8"
+            className="grid grid-cols-2 gap-3 mb-6"
           >
-            <div className="bg-white/5 rounded-2xl p-4 text-center">
-              <div className="text-sm text-white/60 mb-1">최대 콤보</div>
-              <div className="text-3xl font-bold text-white">{result.maxCombo}</div>
+            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/10 box-shadow-xl">
+              <div className="text-[10px] text-white/60 mb-1 font-black uppercase tracking-wider">Max Combo</div>
+              <div className="text-3xl font-black text-white">{result.maxCombo}</div>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 text-center">
-              <div className="text-sm text-white/60 mb-1">성공률</div>
-              <div className="text-3xl font-bold text-white">{result.successRate.toFixed(1)}%</div>
+            <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/10 box-shadow-xl">
+              <div className="text-[10px] text-white/60 mb-1 font-black uppercase tracking-wider">Success Rate</div>
+              <div className="text-3xl font-black text-white">{result.successRate.toFixed(1)}%</div>
             </div>
           </motion.div>
 
@@ -117,5 +125,6 @@ export default function ResultScreen({ result, onRetry, onBackToMenu }: ResultSc
         </div>
       </motion.div>
     </div>
-  );
+  </div>
+);
 }
