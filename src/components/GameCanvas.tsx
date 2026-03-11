@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { useGameLoop } from '../hooks/useGameLoop';
@@ -7,19 +7,8 @@ import GameUI from './GameUI';
 
 const GameCanvas: React.FC = () => {
   const store = useGameStore();
-  const { startNextRound, togglePause } = useGameLoop();
-
-  // 오디오 준비 완료 후 게임 시작
-  useEffect(() => {
-    if (store.audioReady) {
-      console.log('🎮 오디오 준비 완료 → 게임 시작!');
-      const timer = setTimeout(() => {
-        startNextRound();
-      }, 1000); // 1초 대기 (오디오 파일 완전 로드 보장)
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.audioReady]);
+  const { startNextRound, unlockAudio, togglePause } = useGameLoop();
+  const [isStarting, setIsStarting] = useState(false);
 
   // ESC 키로 일시정지
   useEffect(() => {
@@ -59,6 +48,20 @@ const GameCanvas: React.FC = () => {
   const characterStatus = store.currentAttemptResults.map(r => r.success);
   const targetNote = targetPitches[store.currentAttempt] || (store.gender === 'male' ? 'C4' : 'C5');
 
+  const handleAudioStart = async () => {
+    if (isStarting) return;
+
+    try {
+      setIsStarting(true);
+      await unlockAudio();
+      await startNextRound();
+    } catch (error) {
+      console.error('게임 시작 실패:', error);
+      alert('사운드 초기화에 실패했습니다. 다시 시도해주세요.');
+      setIsStarting(false);
+    }
+  };
+
   return (
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 overflow-hidden">
       <div className="relative w-full h-full max-w-[430px] max-h-[932px]" style={{ aspectRatio: '390 / 844' }}>
@@ -86,6 +89,30 @@ const GameCanvas: React.FC = () => {
             </motion.div>
           </div>
         )}
+
+        {store.audioReady && !store.currentWord && !store.countdown && !store.showRoundClear && (
+          <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/70 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center px-8"
+            >
+              <div className="text-white text-3xl font-black mb-4">
+                사운드 활성화
+              </div>
+              <div className="text-gray-300 text-sm mb-6">
+                모바일 브라우저에서는 한 번 탭해야 소리가 재생됩니다
+              </div>
+              <button
+                onClick={handleAudioStart}
+                disabled={isStarting}
+                className="px-8 py-4 bg-white text-purple-600 font-black text-lg rounded-2xl shadow-2xl disabled:opacity-60"
+              >
+                {isStarting ? '시작 중...' : '탭해서 시작'}
+              </button>
+            </motion.div>
+          </div>
+        )}
         
         {/* 카운트다운 오버레이 */}
         {store.countdown && (
@@ -104,7 +131,7 @@ const GameCanvas: React.FC = () => {
         )}
         
         {/* 일시정지 버튼 */}
-        {store.audioReady && !store.countdown && !store.showRoundClear && (
+        {store.audioReady && !!store.currentWord && !store.countdown && !store.showRoundClear && (
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

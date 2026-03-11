@@ -547,9 +547,39 @@ export const useGameLoop = () => {
     }
   };
 
+  const unlockAudio = async () => {
+    if (audioContextRef.current && audioContextRef.current.state !== 'running') {
+      await audioContextRef.current.resume();
+    }
+
+    const audioElements = [
+      guideAudioRef.current,
+      bgMusicRef.current,
+      correctSfxRef.current,
+      negativeSfxRef.current,
+      roundClearSfxRef.current,
+    ].filter(Boolean) as HTMLAudioElement[];
+
+    await Promise.all(audioElements.map(async (audio) => {
+      audio.muted = true;
+      audio.setAttribute('playsinline', 'true');
+
+      try {
+        audio.currentTime = 0;
+        await audio.play();
+        audio.pause();
+      } catch (error) {
+        console.warn('오디오 언락 실패:', error);
+      } finally {
+        audio.currentTime = 0;
+        audio.muted = false;
+      }
+    }));
+  };
+
   return {
     startNextRound,
+    unlockAudio,
     togglePause,
   };
 };
-
