@@ -1,14 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/gameStore';
 import { useGameLoop } from '../hooks/useGameLoop';
 import PianoKeyboard from './PianoKeyboard';
 import GameUI from './GameUI';
+import { RecorderService } from '../services/RecorderService';
 
 const GameCanvas: React.FC = () => {
   const store = useGameStore();
   const { startNextRound, unlockAudio, togglePause } = useGameLoop();
   const [isStarting, setIsStarting] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const recorderServiceRef = useRef<RecorderService | null>(null);
+
+  const attachCameraStream = async (video: HTMLVideoElement, stream: MediaStream) => {
+    if (video.srcObject === stream) return;
+
+    video.srcObject = stream;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', 'true');
+
+    const markReady = () => {
+      setCameraReady(true);
+    };
+
+    video.onloadeddata = markReady;
+    video.onplaying = markReady;
+
+    try {
+      await video.play();
+    } catch (err) {
+      console.warn('카메라 미리보기 재생 실패:', err);
+    }
+  };
+
+  const handleVideoRef = (node: HTMLVideoElement | null) => {
+    videoRef.current = node;
+  };
 
   // ESC 키로 일시정지
   useEffect(() => {
@@ -21,6 +55,31 @@ const GameCanvas: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [store.audioReady, store.countdown, store.showRoundClear, togglePause]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video || !cameraStream) return;
+
+    if (video.srcObject === cameraStream && !video.paused) return;
+
+    setCameraReady(false);
+    void attachCameraStream(video, cameraStream);
+
+    return () => {
+      video.onloadeddata = null;
+      video.onplaying = null;
+      if (video.srcObject === cameraStream) {
+        video.srcObject = null;
+      }
+    };
+  }, [cameraStream]);
+
+  useEffect(() => {
+    return () => {
+      recorderServiceRef.current?.stopCamera();
+    };
+  }, []);
 
   // 목표 음정 계산
   const calculateTargetPitches = (): string[] => {
@@ -47,14 +106,40 @@ const GameCanvas: React.FC = () => {
   const targetPitches = calculateTargetPitches();
   const characterStatus = store.currentAttemptResults.map(r => r.success);
   const targetNote = targetPitches[store.currentAttempt] || (store.gender === 'male' ? 'C4' : 'C5');
+  const hasCameraFeed = store.cameraMode && cameraReady;
+
+  const startCameraPreview = async () => {
+    if (!store.cameraMode) return;
+
+    try {
+      setCameraError(null);
+      setCameraReady(false);
+      const recorderService = recorderServiceRef.current ?? new RecorderService();
+      recorderServiceRef.current = recorderService;
+
+      const stream = await recorderService.startCamera({
+        facingMode: 'user',
+      });
+
+      setCameraStream(stream);
+    } catch (error) {
+      console.error('카메라 시작 실패:', error);
+      setCameraError('카메라 거부됨');
+    }
+  };
 
   const handleAudioStart = async () => {
     if (isStarting) return;
 
     try {
       setIsStarting(true);
-      await unlockAudio();
+      const audioUnlockPromise = unlockAudio();
+      const cameraStartPromise = startCameraPreview();
+
+      await audioUnlockPromise;
+      await cameraStartPromise;
       await startNextRound();
+      setIsStarting(false);
     } catch (error) {
       console.error('게임 시작 실패:', error);
       alert('사운드 초기화에 실패했습니다. 다시 시도해주세요.');
@@ -65,6 +150,47 @@ const GameCanvas: React.FC = () => {
   return (
     <div className="relative w-full h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 overflow-hidden">
       <div className="relative w-full h-full max-w-[430px] max-h-[932px]" style={{ aspectRatio: '390 / 844' }}>
+        {store.cameraMode && (
+          <>
+            <div className="absolute inset-x-1 top-2 bottom-[148px] z-10">
+              <div className="relative h-full w-full overflow-hidden rounded-[28px] border border-white/14 bg-black/20 shadow-[0_24px_64px_rgba(0,0,0,0.22)]">
+                <video
+                  ref={handleVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className={`h-full w-full object-cover transition-opacity duration-300 ${hasCameraFeed ? 'opacity-100' : 'opacity-0'}`}
+                  style={{ transform: 'scaleX(-1)', objectPosition: 'center 22%' }}
+                />
+
+                {!hasCameraFeed && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/10 to-black/45 px-4 text-center">
+                    <div className="mb-3 text-3xl">📷</div>
+                    <div className="text-xs font-black tracking-[0.28em] text-white/85">
+                      {cameraError ? 'CAM OFF' : 'SELFIE CAM'}
+                    </div>
+                    <div className="mt-2 text-[11px] text-white/55">
+                      {cameraError ? '권한을 허용해주세요' : '카메라 연결 중'}
+                    </div>
+                  </div>
+                )}
+
+                {hasCameraFeed && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/08 via-transparent to-black/14" />
+                    <div className="absolute inset-0 ring-1 ring-white/8 ring-inset rounded-[28px]" />
+                  </>
+                )}
+
+                <div className="absolute left-4 top-3 flex items-center gap-1.5 rounded-full bg-black/46 px-2 py-0.5 shadow-[0_6px_18px_rgba(0,0,0,0.22)] backdrop-blur-md">
+                  <span className={`h-2 w-2 rounded-full ${hasCameraFeed ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} />
+                  <span className="text-[11px] font-black tracking-[0.16em] text-white">REC</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* 오디오 준비 대기 화면 */}
         {!store.audioReady && (
           <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-md">
@@ -98,10 +224,12 @@ const GameCanvas: React.FC = () => {
               className="text-center px-8"
             >
               <div className="text-white text-3xl font-black mb-4">
-                사운드 활성화
+                {store.cameraMode ? '사운드 + 카메라 활성화' : '사운드 활성화'}
               </div>
               <div className="text-gray-300 text-sm mb-6">
-                모바일 브라우저에서는 한 번 탭해야 소리가 재생됩니다
+                {store.cameraMode
+                  ? '한 번 탭하면 셀카 카메라와 사운드가 함께 시작됩니다'
+                  : '모바일 브라우저에서는 한 번 탭해야 소리가 재생됩니다'}
               </div>
               <button
                 onClick={handleAudioStart}
@@ -113,7 +241,7 @@ const GameCanvas: React.FC = () => {
             </motion.div>
           </div>
         )}
-        
+
         {/* 카운트다운 오버레이 */}
         {store.countdown && (
           <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm">
@@ -136,9 +264,10 @@ const GameCanvas: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={togglePause}
-            className="absolute top-4 right-4 z-40 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-lg text-white font-bold text-sm transition-all duration-200 border border-white/30"
+            aria-label={store.isPaused ? '계속하기' : '일시정지'}
+            className="absolute top-5 right-5 z-40 flex h-8 w-8 items-center justify-center text-white text-[20px] leading-none transition-all duration-200 drop-shadow-[0_4px_12px_rgba(0,0,0,0.28)]"
           >
-            {store.isPaused ? '▶️ 계속하기' : '⏸️ 일시정지'}
+            {store.isPaused ? '▶️' : '⏸️'}
           </motion.button>
         )}
         
@@ -235,7 +364,7 @@ const GameCanvas: React.FC = () => {
           />
           
           {/* 피아노 건반 */}
-          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 pointer-events-none scale-75">
+          <div className="absolute bottom-32 left-1/2 z-30 transform -translate-x-1/2 pointer-events-none scale-75">
             <PianoKeyboard
               detectedNote={store.detectedNote}
               targetNote={targetNote}

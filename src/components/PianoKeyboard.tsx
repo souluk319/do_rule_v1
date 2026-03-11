@@ -181,7 +181,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
       </div>
 
       {/* 안내 텍스트 - 처음 한 번만 표시 (높이 고정) */}
-      <div className="text-center mt-3" style={{ minHeight: '48px' }}>
+      <div className="text-center mt-10 translate-y-8" style={{ minHeight: '48px' }}>
         <AnimatePresence>
           {!hasDetectedAny && (
             <motion.div
@@ -190,7 +190,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="bg-red-500/80 text-white px-4 py-2 rounded-full inline-block shadow-lg animate-pulse">
+              <div className="bg-red-500/80 text-white px-3.5 py-1.5 text-sm rounded-full inline-block shadow-lg animate-pulse">
                 🎤 큰 소리로 "아~~~~~" 하세요!
               </div>
             </motion.div>
@@ -202,4 +202,3 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ detectedNote, targetNote,
 };
 
 export default PianoKeyboard;
-

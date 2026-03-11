@@ -6,14 +6,9 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
-    allowedHosts: ['hillary-unsecluding-unphilosophically.ngrok-free.dev', '.ngrok-free.dev'],
-    hmr: {
-      clientPort: 443
-    }
   },
   build: {
     target: 'esnext',
     outDir: 'dist'
   }
 });
-

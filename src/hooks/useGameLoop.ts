@@ -282,14 +282,6 @@ export const useGameLoop = () => {
     const word = useGameStore.getState().currentWord;
     console.log(`\n🎬🎬🎬 시도 시작: ${attemptIndex + 1}/${word.length}`);
     
-    // ===== 마지막 시도인 경우 타이머 정지 (판정 완료까지 대기) =====
-    if (attemptIndex === word.length - 1) {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        console.log('⏸️ 마지막 시도 - 타이머 정지');
-      }
-    }
-    
     // ===== 모든 시도 완료 시 라운드 종료 =====
     if (attemptIndex >= word.length) {
       console.log('✅ 모든 시도 완료!');

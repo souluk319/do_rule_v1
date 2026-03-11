@@ -35,7 +35,7 @@ const GameUI: React.FC<GameUIProps> = ({
   }, [currentWord]);
 
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col">
+    <div className="absolute inset-0 z-20 pointer-events-none flex flex-col">
       {/* 상단: 닉네임, 라운드, 점수 */}
       <div className="p-3 pt-4 space-y-2">
         {/* 닉네임 (중앙) */}
@@ -194,4 +194,3 @@ const GameUI: React.FC<GameUIProps> = ({
 };
 
 export default GameUI;
-

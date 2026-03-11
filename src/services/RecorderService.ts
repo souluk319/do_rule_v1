@@ -1,6 +1,11 @@
 /**
  * 카메라 녹화 서비스
  */
+interface CameraStartOptions {
+  includeAudio?: boolean;
+  facingMode?: 'user' | 'environment';
+}
+
 export class RecorderService {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
@@ -10,11 +15,21 @@ export class RecorderService {
   /**
    * 카메라 스트림 시작
    */
-  async startCamera(): Promise<MediaStream> {
+  async startCamera(options: CameraStartOptions = {}): Promise<MediaStream> {
+    const {
+      includeAudio = false,
+      facingMode = 'user',
+    } = options;
+
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 390, height: 844 },
-        audio: true
+        video: {
+          facingMode,
+          width: { ideal: 720 },
+          height: { ideal: 1280 },
+          aspectRatio: { ideal: 9 / 16 },
+        },
+        audio: includeAudio
       });
       return this.stream;
     } catch (error) {
@@ -108,4 +123,3 @@ export class RecorderService {
     }
   }
 }
-
