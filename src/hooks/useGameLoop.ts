@@ -90,24 +90,24 @@ export const useGameLoop = () => {
         
         // OscillatorTone 초기화
         // ===== 🎵 가이드 톤 WAV 로드 =====
-        guideAudioRef.current = new Audio('/docs/sounds/c_gudie.wav');
+        guideAudioRef.current = new Audio('/sounds/c_gudie.wav');
         guideAudioRef.current.volume = 0.5;
         console.log('✅ 가이드 톤 WAV 로드 완료');
         
         // ===== 🎵 배경음악 로드 (재생은 카운트다운 후) =====
-        bgMusicRef.current = new Audio('/docs/sounds/bg_perc.wav');
+        bgMusicRef.current = new Audio('/sounds/bg_perc.wav');
         bgMusicRef.current.loop = true;
         bgMusicRef.current.volume = 0.3;
         console.log('✅ 배경음악 로드 완료 (재생 대기)');
         
         // ===== 🎵 효과음 로드 =====
-        correctSfxRef.current = new Audio('/docs/sounds/correct.wav');
+        correctSfxRef.current = new Audio('/sounds/correct.wav');
         correctSfxRef.current.volume = 0.6;
         
-        negativeSfxRef.current = new Audio('/docs/sounds/negative.wav');
+        negativeSfxRef.current = new Audio('/sounds/negative.wav');
         negativeSfxRef.current.volume = 0.6;
         
-        roundClearSfxRef.current = new Audio('/docs/sounds/roundclear.wav');
+        roundClearSfxRef.current = new Audio('/sounds/roundclear.wav');
         roundClearSfxRef.current.volume = 0.7;
         console.log('✅ 효과음 로드 완료');
         
