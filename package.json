@@ -5,9 +5,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap open android",
+    "cap:ios": "npm run build && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "framer-motion": "^10.16.16",
     "pitchfinder": "^2.3.2",
     "react": "^18.2.0",

@@ -38,7 +38,7 @@ function App() {
   };
 
   return (
-    <div className="w-full h-full fixed inset-0 overflow-hidden bg-black">
+    <div className="w-full h-full fixed inset-0 overflow-hidden bg-black" style={{ paddingTop: 'var(--safe-top)', paddingRight: 'var(--safe-right)', paddingBottom: 'var(--safe-bottom)', paddingLeft: 'var(--safe-left)' }}>
       <AnimatePresence mode="wait">
         {screen === 'menu' && (
           <motion.div
