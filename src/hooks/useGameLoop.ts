@@ -59,14 +59,15 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
   const pitchCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const usedPromptsRef = useRef<Set<string>>(new Set());
 
-  // ── 1. 오디오 초기화 ──────────────────────────
+  // ── 1. 오디오 초기화 (마이크 권한 요청 + 오디오 엘리먼트 생성) ──────
+  // iOS Safari: new AudioContext()는 사용자 제스처 안에서만 정상 동작.
+  // 따라서 AudioContext·PitchDetector는 unlockAudio()에서 생성하고,
+  // 이 useEffect에서는 마이크 권한 요청·오디오 엘리먼트 생성만 처리.
   useEffect(() => {
     console.log('🎤 오디오 초기화 시작...');
 
     const initAudio = async () => {
       try {
-        audioContextRef.current = new AudioContext();
-
         micStreamRef.current = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: false,
@@ -74,11 +75,6 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
             autoGainControl: false,
           },
         });
-
-        pitchDetectorRef.current = new PitchDetector(
-          audioContextRef.current,
-          micStreamRef.current
-        );
 
         guideAudioRef.current = new Audio('/sounds/c_gudie.wav');
         guideAudioRef.current.volume = 0.5;
@@ -96,7 +92,7 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
         roundClearSfxRef.current = new Audio('/sounds/roundclear.wav');
         roundClearSfxRef.current.volume = 0.7;
 
-        console.log('✅ 오디오 초기화 완료');
+        console.log('✅ 마이크·오디오 엘리먼트 초기화 완료');
         setAudioReady(true);
       } catch (error) {
         console.error('❌ 오디오 초기화 실패:', error);
@@ -251,6 +247,7 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
     const focusPitch = isReverse ? notes.low : notes.high;
     const basePitch = isReverse ? notes.high : notes.low;
     const tolerance = getTolerance();
+    const criteria = getJudgmentCriteria();
 
     const samples: string[] = [];
     const startTime = Date.now();
@@ -293,8 +290,8 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
         const focusRatio = focusCount / totalSamples;
         const baseRatio = baseCount / totalSamples;
 
-        const focusSuccess = focusCount >= 2 || focusRatio >= 0.05;
-        const baseSuccess = baseCount >= 1 || baseRatio >= 0.3;
+        const focusSuccess = focusCount >= criteria.minFocusCount || focusRatio >= criteria.minFocusRatio;
+        const baseSuccess = baseCount >= criteria.minBaseCount || baseRatio >= criteria.minBaseRatio;
 
         if (focusSuccess && baseSuccess) {
           earlySuccessCount++;
@@ -321,8 +318,8 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
 
         console.log(`📊 시도 ${attemptIndex + 1} | 총 ${totalSamples}개 | Focus: ${(focusRatio * 100).toFixed(1)}% | Base: ${(baseRatio * 100).toFixed(1)}%`);
 
-        const focusSuccess = focusCount >= 2 || focusRatio >= 0.05;
-        const baseSuccess = baseCount >= 1 || baseRatio >= 0.3;
+        const focusSuccess = focusCount >= criteria.minFocusCount || focusRatio >= criteria.minFocusRatio;
+        const baseSuccess = baseCount >= criteria.minBaseCount || baseRatio >= criteria.minBaseRatio;
         const success = focusSuccess && baseSuccess;
         const accuracy = (focusRatio + baseRatio) / 2;
 
@@ -392,6 +389,21 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
     }
   };
 
+  // 난이도별 판정 기준
+  // easy:   판정이 관대 - 짧은 샘플로도, 낮은 비율로도 통과
+  // normal: 기본 기준
+  // hard:   엄격 - 충분한 샘플 수 + 높은 비율 필요
+  const getJudgmentCriteria = () => {
+    switch (difficulty) {
+      case 'easy':
+        return { minFocusCount: 1, minFocusRatio: 0.03, minBaseCount: 1, minBaseRatio: 0.2 };
+      case 'hard':
+        return { minFocusCount: 4, minFocusRatio: 0.10, minBaseCount: 2, minBaseRatio: 0.4 };
+      default: // normal
+        return { minFocusCount: 2, minFocusRatio: 0.05, minBaseCount: 1, minBaseRatio: 0.3 };
+    }
+  };
+
   // ── 일시정지 토글 ─────────────────────────────
   const togglePause = () => {
     const isPaused = useGameStore.getState().isPaused;
@@ -408,10 +420,23 @@ export const useGameLoop = ({ onGameEnd }: UseGameLoopOptions) => {
     }
   };
 
-  // ── 오디오 언락 (모바일 최초 탭) ─────────────
+  // ── 오디오 언락 (모바일 최초 탭 / 사용자 제스처 안에서 실행) ────────
+  // iOS Safari: AudioContext는 반드시 사용자 제스처 핸들러에서 생성해야 소리가 남.
   const unlockAudio = async () => {
-    if (audioContextRef.current && audioContextRef.current.state !== 'running') {
+    // AudioContext 생성 (최초 1회, 사용자 제스처 안에서)
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+    }
+    if (audioContextRef.current.state !== 'running') {
       await audioContextRef.current.resume();
+    }
+
+    // PitchDetector 생성 (micStream은 이미 useEffect에서 준비됨)
+    if (!pitchDetectorRef.current && micStreamRef.current) {
+      pitchDetectorRef.current = new PitchDetector(
+        audioContextRef.current,
+        micStreamRef.current
+      );
     }
 
     const audioElements = [

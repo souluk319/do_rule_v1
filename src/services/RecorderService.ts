@@ -39,15 +39,34 @@ export class RecorderService {
   }
 
   /**
+   * 기기가 지원하는 MIME 타입 선택 (iOS Safari는 webm 미지원)
+   */
+  private getSupportedMimeType(): string {
+    const candidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4;codecs=h264,aac',
+      'video/mp4',
+    ];
+    for (const mime of candidates) {
+      if (MediaRecorder.isTypeSupported(mime)) return mime;
+    }
+    return '';
+  }
+
+  /**
    * 녹화 시작
    */
   startRecording(stream: MediaStream): void {
     if (this.isRecording) return;
 
     this.recordedChunks = [];
-    this.mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9,opus'
-    });
+    const mimeType = this.getSupportedMimeType();
+    this.mediaRecorder = new MediaRecorder(
+      stream,
+      mimeType ? { mimeType } : undefined
+    );
 
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -70,7 +89,8 @@ export class RecorderService {
       }
 
       this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        const mimeType = this.mediaRecorder?.mimeType || 'video/mp4';
+        const blob = new Blob(this.recordedChunks, { type: mimeType });
         this.isRecording = false;
         resolve(blob);
       };
@@ -92,7 +112,11 @@ export class RecorderService {
   /**
    * 파일 다운로드
    */
-  downloadVideo(blob: Blob, filename: string = 'do-rule-recording.webm'): void {
+  downloadVideo(blob: Blob, filename?: string): void {
+    if (!filename) {
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      filename = `do-rule-recording.${ext}`;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -110,7 +134,8 @@ export class RecorderService {
     }
 
     try {
-      const file = new File([blob], 'do-rule-recording.webm', { type: 'video/webm' });
+      const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], `do-rule-recording.${ext}`, { type: blob.type });
       await navigator.share({
         title: '도를 아십니까 (DO-RULL)',
         text: '절대음감 리듬 게임 플레이 영상',
