@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { TIMER_DURATION } from '../store/gameStore';
 
 interface GameUIProps {
   nickname: string;
@@ -26,7 +27,7 @@ const GameUI: React.FC<GameUIProps> = ({
   targetPitches,
   isAttempting,
 }) => {
-  const progressPercent = (timeRemaining / 8) * 100;
+  const progressPercent = (timeRemaining / TIMER_DURATION) * 100;
   const isLowTime = timeRemaining < 5;
 
   // 단어 글자 배열 메모이제이션 (불필요한 리렌더링 방지)

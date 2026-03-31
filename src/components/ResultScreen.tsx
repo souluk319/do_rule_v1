@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { GameResult } from '../App';
+import type { GameResult } from '../types';
 
 interface ResultScreenProps {
   result: GameResult;

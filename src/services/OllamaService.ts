@@ -24,7 +24,8 @@
  * - Ollama 실패 시 → 미리 준비된 단어 풀 사용
  * - 게임 중단 없이 안정적 동작 보장
  */
-const OLLAMA_BASE_URL = (import.meta as any).env?.VITE_OLLAMA_URL || 'http://localhost:11434/api/generate';
+import { AI_CONFIG } from '../config/aiConfig';
+import { getFallbackPool } from '../utils/FallbackGenerator';
 
 export interface GenerateRequest {
   mode: 'prompt' | 'comment';
@@ -40,9 +41,11 @@ export interface GenerateResponse {
 
 export class OllamaService {
   private baseUrl: string;
+  private timeoutMs: number;
 
-  constructor(baseUrl: string = OLLAMA_BASE_URL) {
+  constructor(baseUrl: string = AI_CONFIG.ollamaUrl, timeoutMs: number = AI_CONFIG.timeoutMs) {
     this.baseUrl = baseUrl;
+    this.timeoutMs = timeoutMs;
   }
 
   /**
@@ -85,15 +88,15 @@ export class OllamaService {
 
     console.log(`⚠️ Plan B 부족: 총 ${combined.length}/${count}개만 생성`);
 
-    // ===== Plan C: 기본 단어로 나머지 채우기 =====
-    console.log('📍 Plan C: 기본 단어 풀 사용...');
-    const defaultWords = this.getDefaultWords(charLen);
+    // ===== Plan C: 폴백 단어 풀로 나머지 채우기 =====
+    console.log('📍 Plan C: 폴백 단어 풀 사용...');
+    const defaultWords = getFallbackPool(charLen);
     const finalWords = [...combined];
 
-    while (finalWords.length < count) {
-      const randomWord = defaultWords[Math.floor(Math.random() * defaultWords.length)];
-      if (!finalWords.includes(randomWord)) {
-        finalWords.push(randomWord);
+    for (const word of defaultWords) {
+      if (finalWords.length >= count) break;
+      if (!finalWords.includes(word)) {
+        finalWords.push(word);
       }
     }
 
@@ -127,9 +130,14 @@ export class OllamaService {
           num_predict: 150
         };
 
+      // 타임아웃 제어 (AbortController)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           model: model,
           prompt: prompt,
@@ -137,6 +145,7 @@ export class OllamaService {
           options: options
         })
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`${model} API error: ${response.statusText}`);
@@ -239,63 +248,5 @@ ${examples[7]}
 코멘트 하나만 출력하세요.`;
   }
 
-  private getDefaultWords(charLen: number): string[] {
-    const words: Record<number, string[]> = {
-      4: [
-        '김치찌개', '된장찌개', '순대국밥', '불닭볶음', '양념치킨',
-        '간장새우', '크림수프', '마라탕면', '치즈김밥', '참치마요',
-        '초코라떼', '딸기우유', '바닐라빈', '제로콜라', '망고빙수',
-        '수박주스', '카페라떼', '핫초코잔', '허니버터', '소금빵집',
-        '봄꽃향기', '여름비옷', '가을하늘', '겨울바다', '노을빛깔',
-        '별빛야경', '구름한점', '새벽공기', '달빛산책', '바람결따',
-        '학교축제', '주말여행', '야근지옥', '월급로그', '퇴근소리',
-        '출근버스', '점심시간', '회의지옥', '퇴사각서', '휴가계획',
-        '게임천재', '레벨업각', '보스전투', '콤보장인', '연습모드',
-        '치킨나라', '피자나라', '디저트왕', '간식천국', '야식출동',
-        '심쿵주의', '행복가득', '웃음벨각', '감동실화', '멍때리기',
-        '인생네컷', '짤방수집', '밈중독자', '고양이짤', '강아지풀',
-        '친구모임', '가족사진', '비밀일기', '소원빌기', '추억여행',
-        '운동시작', '산책코스', '독서타임', '영화감상', '음악감상',
-        '달콤상상', '반짝아이', '말랑복숭', '폭신이불', '방구석왕'
-      ],
-      5: [
-        '불닭볶음면', '김치볶음밥', '치즈계란말', '얼큰순대국', '로제떡볶이',
-        '새우튀김각', '쫄면곱빼기', '수제왕돈까', '매콤닭강정', '달콤핫도그',
-        '딸기생크림', '초코크로플', '바닐라마카', '망고스무디', '레몬에이드',
-        '겨울붕어빵', '노릇군고구', '쫀득인절미', '달달호떡집', '소금버터롤',
-        '새벽감성샷', '노을맛집길', '달빛산책로', '여름바다빛', '가을단풍길',
-        '비오는날씨', '반짝별조각', '폭신구름빵', '잔잔파도소', '초록숲내음',
-        '주말영화관', '출근전쟁터', '퇴근러시끝', '월요일싫어', '금요일만세',
-        '점심메뉴판', '야근탈출각', '휴가계획표', '여행출발전', '통장잔고봄',
-        '게임한판더', '랭크승급전', '보스레이드', '콤보연습장', '튜토리얼끝',
-        '고양이집사', '강아지산책', '햄스터간식', '오리발자국', '펭귄뒤뚱이',
-        '친구소환중', '가족모임날', '추억사진첩', '비밀아지트', '소원빌어봐',
-        '오늘도성장', '행복충전중', '심쿵주의보', '기분좋은날', '웃음참기챌',
-        '음악듣는중', '영화보고파', '산책가고파', '운동시작해', '독서몰입중'
-      ],
-      6: [
-        '오늘치킨먹자', '불닭볶음추가', '김치찌개한입', '수제버거한입', '로제떡볶최고',
-        '마라탕먹는중', '치즈피자한판', '달콤탕후루각', '초코라떼수혈', '망고빙수맛집',
-        '새벽감성충전', '노을빛깔미침', '바다냄새좋다', '구름모양신기', '봄바람살랑임',
-        '여름휴가출발', '가을단풍구경', '겨울눈사람짱', '달빛산책코스', '별빛야경명소',
-        '월요일너무김', '금요일만세다', '출근길사람들', '퇴근하고눕자', '점심시간순삭',
-        '야근이제그만', '주말약속가득', '휴가계획완료', '통장잔고비상', '회의시간끝나',
-        '게임한판가자', '랭크점수상승', '보스패턴숙지', '콤보연습완료', '실전스테이지',
-        '고양이집사력', '강아지산책중', '햄스터간식통', '펭귄걸음신기', '오리꽥꽥출근',
-        '친구들이수다', '가족사진다시', '추억앨범꺼내', '비밀아지트짱', '소원하나빌자',
-        '행복충전완료', '심쿵주의발령', '웃음참기실패', '기분좋아서흥', '오늘도파이팅'
-      ]
-    };
-    const list = words[charLen] || words[4];
-
-    // 랜덤 셔플
-    const shuffled = [...list];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-    console.log(`🎲 폴백 단어 생성 (${charLen}글자, 셔플됨):`, shuffled.slice(0, 5));
-    return shuffled;
-  }
+  // getDefaultWords 제거됨 → FallbackGenerator.getFallbackPool() 사용
 }
