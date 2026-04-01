@@ -4,6 +4,8 @@ import { useGameStore } from '../store/gameStore';
 import { useGameLoop } from '../hooks/useGameLoop';
 import PianoKeyboard from './PianoKeyboard';
 import GameUI from './GameUI';
+import CameraFilter from './CameraFilter';
+import { useCameraFilter } from '../hooks/useCameraFilter';
 import { RecorderService } from '../services/RecorderService';
 import type { GameResult } from '../types';
 
@@ -14,6 +16,7 @@ interface GameCanvasProps {
 const GameCanvas: React.FC<GameCanvasProps> = ({ onGameEnd }) => {
   const store = useGameStore();
   const { startNextRound, unlockAudio, togglePause } = useGameLoop({ onGameEnd });
+  const { enabled: filterEnabled, toggleFilter, config: filterConfig } = useCameraFilter();
   const [isStarting, setIsStarting] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
@@ -136,11 +139,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameEnd }) => {
         {store.cameraMode && (
           <div className="absolute inset-0 z-10">
             <div className="relative h-full w-full overflow-hidden bg-black/20 shadow-2xl">
+              {/* 숨겨진 video 요소 — CameraFilter의 소스로 사용 */}
               <video
                 ref={handleVideoRef}
                 autoPlay muted playsInline
-                className={`h-full w-full object-cover transition-opacity duration-300 ${hasCameraFeed ? 'opacity-100' : 'opacity-0'}`}
-                style={{ transform: 'scaleX(-1)', objectPosition: 'center 22%' }}
+                className="hidden"
+              />
+              {/* Canvas 기반 필터 렌더러 */}
+              <CameraFilter
+                videoRef={videoRef}
+                enabled={filterEnabled}
+                config={filterConfig}
+                className={`h-full w-full transition-opacity duration-300 ${hasCameraFeed ? 'opacity-100' : 'opacity-0'}`}
               />
               {!hasCameraFeed && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/10 to-black/45 px-4 text-center">
@@ -159,10 +169,23 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ onGameEnd }) => {
                   <div className="absolute inset-0 ring-1 ring-white/8 ring-inset rounded-[28px]" />
                 </>
               )}
+              {/* REC 표시 */}
               <div className="absolute left-4 top-3 flex items-center gap-1.5 rounded-full bg-black/46 px-2 py-0.5 shadow-[0_6px_18px_rgba(0,0,0,0.22)] backdrop-blur-md">
                 <span className={`h-2 w-2 rounded-full ${hasCameraFeed ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} />
                 <span className="text-[11px] font-black tracking-[0.16em] text-white">REC</span>
               </div>
+              {/* 필터 토글 버튼 */}
+              {hasCameraFeed && (
+                <button
+                  onClick={toggleFilter}
+                  className="absolute right-4 top-3 flex items-center gap-1 rounded-full bg-black/46 px-2 py-0.5 shadow-[0_6px_18px_rgba(0,0,0,0.22)] backdrop-blur-md transition-colors duration-200"
+                  title={filterEnabled ? '필터 끄기' : '필터 켜기'}
+                >
+                  <span className={`text-[11px] font-black tracking-[0.12em] transition-colors duration-200 ${filterEnabled ? 'text-yellow-400' : 'text-white/45'}`}>
+                    FX {filterEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         )}
